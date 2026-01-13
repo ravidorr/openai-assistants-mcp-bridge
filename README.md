@@ -38,7 +38,6 @@ Each expert remembers your conversation, so you can have back-and-forth discussi
 1. Open the terminal
 2. Go to the folder where your projects are i.e.: `~/Documents/Cursor`
 3. In the terminal run:
-
 ```bash
 # Download the project, open the project folder, instll the project, and build the project
 git clone https://github.com/ravidorr/openai-assistants-mcp-bridge.git && cd openai-assistants-mcp-bridge && npm install && npm run build
@@ -53,10 +52,13 @@ git clone https://github.com/ravidorr/openai-assistants-mcp-bridge.git && cd ope
 
 ### Step 4: Create the AI Assistants
 
-The assistants are the AI experts that will review your designs. Run this command to create them:
-
+The assistants are the AI experts that will review your designs. 
+1. In the terminal run this to save your OpenAI API key. Don't forget to replace 'PASTE_YOUR_OPENAI_API_KEY_HERE' with your OpenAI API key:
 ```bash
-export OPENAI_API_KEY=sk-paste-your-key-here
+export OPENAI_API_KEY=PASTE_YOUR_OPENAI_API_KEY_HERE
+```
+2. In the terminal run this to create your assistants:
+```bash
 npm run create-assistants
 ```
 
@@ -92,9 +94,9 @@ Cursor MCP Configuration (mcp.json):
 2. Open Settings (Cmd+, on Mac)
 3. Search for "MCP" in settings
 4. Click "Edit in mcp.json"
-5. Copy the JSON configuration from the script output and paste it into `mcp.json`
-6. Replace `sk-paste-your-api-key-here` with your actual OpenAI API key
-7. Save the file and restart Cursor
+5. If you already have `"mcpServers": {...` in your `mcp.json` add only the `"openai-assistants-bridge": {...}` If you don't have `"mcpServers": {...` in your `mcp.json` add the whole `{"mcpServers": {...}`
+6. In the `openai-assistants-bridge` replace the value of `OPENAI_API_KEY` (`sk-paste-your-api-key-here`) with your actual OpenAI API key
+7. Save the file and *restart* Cursor
 
 ### Step 6: Start Using It!
 
@@ -166,12 +168,11 @@ When using any of the design expert tools, you can include:
 ## Updating an Assistant
 
 Need to change an assistant's name or instructions? Use the update wizard:
-
+1. Open the terminal and navigate to the `openai-assistants-mcp-bridge` project
+2. In the terminal run:
 ```bash
-export OPENAI_API_KEY=sk-your-key-here
 npm run update-assistant
 ```
-
 The wizard will:
 1. Read your `mcp.json` and show a list of configured assistants
 2. Let you select which assistant to update
@@ -179,7 +180,6 @@ The wizard will:
 4. Confirm before applying updates
 
 Example:
-
 ```
 ========================================
   OpenAI Assistant Update Wizard
