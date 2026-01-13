@@ -170,6 +170,55 @@ When using any of the design expert tools, you can include:
 
 ---
 
+## Updating an Assistant
+
+Need to change an assistant's name or instructions? Use the update wizard:
+
+```bash
+export OPENAI_API_KEY=sk-your-key-here
+npm run update-assistant
+```
+
+The wizard will:
+1. Read your `mcp.json` and show a list of configured assistants
+2. Let you select which assistant to update
+3. Show current details and prompt for changes
+4. Confirm before applying updates
+
+Example:
+
+```
+========================================
+  OpenAI Assistant Update Wizard
+========================================
+
+Found 6 assistants in /Users/you/.cursor/mcp.json:
+
+  1) UX Consultant
+     asst_abc123...
+
+  2) Personas & Journeys
+     asst_def456...
+
+  ...
+
+  7) Enter a different assistant ID manually
+
+Select an assistant (1-7): 1
+
+Fetching current assistant details...
+
+Current Assistant:
+  ID:    asst_abc123
+  Name:  UX Consultant (Complex SaaS)
+  Model: gpt-4o
+
+Enter new name (press Enter to keep current):
+Do you want to update the instructions? (y/N):
+```
+
+---
+
 ## For Developers
 
 <details>

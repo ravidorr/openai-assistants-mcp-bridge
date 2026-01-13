@@ -21,6 +21,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "create-assistants": "tsx scripts/create-assistants.ts",
+    "update-assistant": "tsx scripts/update-assistant.ts",
     "prepare": "husky"
   },
   "dependencies": {
