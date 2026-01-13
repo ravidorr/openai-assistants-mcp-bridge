@@ -37,7 +37,7 @@ The setup script handles everything: prompts for your API key, creates the assis
 ### Prerequisites
 
 - **Node.js 18+**: Download from [nodejs.org](https://nodejs.org/) (LTS version recommended)
-- **OpenAI API key**: Get one from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- **OpenAI API key**: Get one from [platform.openai.com/api-keys](https://platform.openai.com/api-keys). Make sure you are using your OpenAI work account.
 - **Cursor IDE**: Download from [cursor.sh](https://cursor.sh/)
 
 ### Step 1: Download and Build

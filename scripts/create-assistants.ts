@@ -51,7 +51,8 @@ async function promptYesNo(
 
 async function promptForApiKey(rl: readline.Interface): Promise<string> {
   console.log("\nOpenAI API Key not found in environment.");
-  console.log("Get your API key from: https://platform.openai.com/api-keys\n");
+  console.log("Get your API key from: https://platform.openai.com/api-keys");
+  console.log("Make sure you are using your OpenAI work account.\n");
 
   const apiKey = await prompt(rl, "Enter your OpenAI API key: ");
 
