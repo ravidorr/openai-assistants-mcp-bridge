@@ -35,20 +35,13 @@ Each expert remembers your conversation, so you can have back-and-forth discussi
 
 ### Step 2: Download and Install
 
-Open your terminal and run these commands one at a time:
+1. Open the terminal
+2. Go to the folder where your projects are i.e.: `~/Documents/Cursor`
+3. In the terminal run:
 
 ```bash
-# Download the project
-git clone https://github.com/ravidorr/openai-assistants-mcp-bridge.git
-
-# Go into the project folder
-cd openai-assistants-mcp-bridge
-
-# Install required packages (this may take a minute)
-npm install
-
-# Build the project
-npm run build
+# Download the project, open the project folder, instll the project, and build the project
+git clone https://github.com/ravidorr/openai-assistants-mcp-bridge.git && cd openai-assistants-mcp-bridge && npm install && npm run build
 ```
 
 ### Step 3: Get Your OpenAI API Key
