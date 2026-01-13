@@ -53,9 +53,9 @@ git clone https://github.com/ravidorr/openai-assistants-mcp-bridge.git && cd ope
 ### Step 4: Create the AI Assistants
 
 The assistants are the AI experts that will review your designs. 
-1. In the terminal run this to save your OpenAI API key. Don't forget to replace 'PASTE_YOUR_OPENAI_API_KEY_HERE' with your OpenAI API key:
+1. In the terminal run this to save your OpenAI API key. Don't forget to replace 'REPLACE_THIS_WITH_YOUR_OPENAI_API_KEY' with your OpenAI API key:
 ```bash
-export OPENAI_API_KEY=PASTE_YOUR_OPENAI_API_KEY_HERE
+export OPENAI_API_KEY=REPLACE_THIS_WITH_YOUR_OPENAI_API_KEY
 ```
 2. In the terminal run this to create your assistants:
 ```bash
@@ -98,7 +98,31 @@ Cursor MCP Configuration (mcp.json):
 6. In the `openai-assistants-bridge` replace the value of `OPENAI_API_KEY` (`sk-paste-your-api-key-here`) with your actual OpenAI API key
 7. Save the file and *restart* Cursor
 
-### Step 6: Start Using It!
+### Step 6: Enable Browser Automation
+
+The assistants work best when they can view your designs in the browser. Enable these settings:
+
+1. Open Cursor Settings (Cmd+, on Mac)
+2. Go to **Tools & MCP** in the sidebar
+3. Under **Browser**, set **Browser Automation** to "Browser Tab"
+4. Turn on **Show Localhost Links in Browser**
+
+This allows the assistants to take screenshots and interact with your running app.
+
+### Step 7: (Optional) Install Figma MCP
+
+For reviewing Figma designs, install the Figma MCP:
+
+1. In Cursor Settings, go to **Tools & MCP**
+2. Scroll to **Installed MCP Servers**
+3. Click **Add new MCP server**
+4. Look in the [Guide to the Figma MCP server](https://help.figma.com/hc/en-us/articles/32132100833559-Guide-to-the-Figma-MCP-server) for instrucations and install either:
+   - **Figma** - for reviewing designs via Figma URLs
+   - **Figma Desktop** - for reviewing designs from the Figma desktop app (requires Figma desktop to be running)
+
+Once installed, you can share Figma URLs or selection context with the assistants for design review.
+
+### Step 8: Start Using It!
 
 In Cursor's chat, you can now ask the AI to use any of the design experts. Try these example prompts:
 
