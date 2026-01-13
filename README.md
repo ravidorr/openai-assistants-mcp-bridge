@@ -192,16 +192,14 @@ Example:
   OpenAI Assistant Update Wizard
 ========================================
 
-Found 6 assistants in /Users/you/.cursor/mcp.json:
+Found 6 assistants:
 
   1) UX Consultant
-     asst_abc123...
-
   2) Personas & Journeys
-     asst_def456...
-
-  ...
-
+  3) UI Critique
+  4) Microcopy Editor
+  5) Accessibility Reviewer
+  6) Super Agent
   7) Enter a different assistant ID manually
 
 Select an assistant (1-7): 1
@@ -209,7 +207,6 @@ Select an assistant (1-7): 1
 Fetching current assistant details...
 
 Current Assistant:
-  ID:    asst_abc123
   Name:  UX Consultant (Complex SaaS)
   Model: gpt-4o
 

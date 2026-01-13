@@ -251,17 +251,15 @@ async function main() {
     let assistantId = "";
 
     if (mcpConfig && mcpConfig.assistants.length > 0) {
-      console.log(`Found ${mcpConfig.assistants.length} assistants in ${mcpConfig.mcpPath}:\n`);
+      console.log(`Found ${mcpConfig.assistants.length} assistants:\n`);
 
       mcpConfig.assistants.forEach((assistant, index) => {
         const displayName = getAssistantDisplayName(assistant.envVar);
         console.log(`  ${index + 1}) ${displayName}`);
-        console.log(`     ${assistant.id}\n`);
       });
 
-      console.log(
-        `  ${mcpConfig.assistants.length + 1}) Enter a different assistant ID manually\n`
-      );
+      console.log(`  ${mcpConfig.assistants.length + 1}) Enter a different assistant ID manually`);
+      console.log("");
 
       const selection = await prompt(
         rl,
