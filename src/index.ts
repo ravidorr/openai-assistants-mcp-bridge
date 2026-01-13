@@ -73,7 +73,9 @@ function optionalEnv(name: string, defaultValue: string): string {
  */
 function optionalEnvNumber(name: string, defaultValue: number): number {
   const value = process.env[name];
-  if (!value) return defaultValue;
+  if (!value) {
+    return defaultValue;
+  }
   const parsed = parseInt(value, 10);
   return isNaN(parsed) ? defaultValue : parsed;
 }
@@ -316,10 +318,7 @@ async function addFileToVectorStore(vectorStoreId: string, fileId: string): Prom
  * @param filePaths - Array of file paths to process
  * @returns The vector store ID
  */
-async function ensureFilesInVectorStore(
-  toolName: string,
-  filePaths: string[]
-): Promise<string> {
+async function ensureFilesInVectorStore(toolName: string, filePaths: string[]): Promise<string> {
   const vectorStoreId = await getOrCreateVectorStoreId(toolName);
 
   // Upload files in parallel
@@ -338,7 +337,7 @@ async function ensureFilesInVectorStore(
   const uploadedFiles = await Promise.all(uploadPromises);
 
   // Add files to vector store in parallel
-  const addPromises = uploadedFiles.map(async ({ absolutePath, fileId }) => {
+  const addPromises = uploadedFiles.map(async ({ fileId }) => {
     try {
       await addFileToVectorStore(vectorStoreId, fileId);
     } catch (error) {
@@ -367,26 +366,57 @@ async function ensureFilesInVectorStore(
 // ============================================================================
 
 /**
+ * Message content types for OpenAI Assistants API
+ */
+type MessageContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string; detail?: "auto" | "low" | "high" } };
+
+/**
  * Run an assistant on a thread and wait for completion
  *
  * @param assistantId - The OpenAI assistant ID
  * @param threadId - The thread ID
  * @param userMessage - The message to send to the assistant
  * @param vectorStoreId - Optional vector store ID for file search
+ * @param imageUrls - Optional array of image URLs to include in the message
  * @returns The assistant's text response
  */
 async function runAssistantOnThread(
   assistantId: string,
   threadId: string,
   userMessage: string,
-  vectorStoreId?: string
+  vectorStoreId?: string,
+  imageUrls?: string[]
 ): Promise<string> {
-  logger.info("Running assistant", { assistantId, threadId, hasVectorStore: !!vectorStoreId });
+  logger.info("Running assistant", {
+    assistantId,
+    threadId,
+    hasVectorStore: !!vectorStoreId,
+    imageCount: imageUrls?.length ?? 0,
+  });
 
-  // 1. Add user message to thread
+  // 1. Build message content (text + optional images)
+  const content: MessageContentPart[] = [];
+
+  // Add images first (if any) so they appear before the text prompt
+  if (imageUrls && imageUrls.length > 0) {
+    for (const url of imageUrls) {
+      content.push({
+        type: "image_url",
+        image_url: { url, detail: "auto" },
+      });
+    }
+    logger.debug("Added images to message", { imageCount: imageUrls.length });
+  }
+
+  // Add text content
+  content.push({ type: "text", text: userMessage });
+
+  // 2. Add user message to thread
   await openaiFetch(`/threads/${threadId}/messages`, {
     role: "user",
-    content: userMessage,
+    content,
   });
 
   // 2. Create run with optional vector store for file search
@@ -440,7 +470,9 @@ async function runAssistantOnThread(
 
   if (currentStatus !== RUN_STATUS.COMPLETED) {
     logger.error("Run timed out", { runId, lastStatus: currentStatus });
-    throw new Error(`Run timed out after ${config.pollTimeoutMs}ms (last status: ${currentStatus})`);
+    throw new Error(
+      `Run timed out after ${config.pollTimeoutMs}ms (last status: ${currentStatus})`
+    );
   }
 
   // 4. Fetch and return the assistant's response
@@ -473,10 +505,7 @@ const server = new McpServer({
  * Zod schema for specialist tool inputs
  */
 const toolInputSchema = {
-  prompt: z
-    .string()
-    .min(1)
-    .describe("User request / content to send to the assistant"),
+  prompt: z.string().min(1).describe("User request / content to send to the assistant"),
   context: z
     .string()
     .optional()
@@ -485,10 +514,13 @@ const toolInputSchema = {
     .array(z.string())
     .optional()
     .describe("Local file paths to upload and add to file_search for this specialist"),
-  reset_thread: z
-    .boolean()
+  image_urls: z
+    .array(z.string().url())
     .optional()
-    .describe("If true, start a fresh thread for this tool"),
+    .describe(
+      "Image URLs to include in the message for visual analysis (e.g., screenshots, design mockups)"
+    ),
+  reset_thread: z.boolean().optional().describe("If true, start a fresh thread for this tool"),
   reset_files: z
     .boolean()
     .optional()
@@ -505,8 +537,20 @@ function createSpecialistTool(toolName: string, envKey: AssistantKey): void {
   server.tool(
     toolName,
     toolInputSchema,
-    async ({ prompt, context, files, reset_thread, reset_files }): Promise<ToolResponse> => {
-      logger.info("Tool invoked", { toolName, hasContext: !!context, fileCount: files?.length ?? 0 });
+    async ({
+      prompt,
+      context,
+      files,
+      image_urls,
+      reset_thread,
+      reset_files,
+    }): Promise<ToolResponse> => {
+      logger.info("Tool invoked", {
+        toolName,
+        hasContext: !!context,
+        fileCount: files?.length ?? 0,
+        imageCount: image_urls?.length ?? 0,
+      });
 
       const assistantId = getAssistantId(envKey);
 
@@ -535,12 +579,13 @@ function createSpecialistTool(toolName: string, envKey: AssistantKey): void {
       // Combine context and prompt
       const combinedMessage = context ? `${context}\n\n---\n\n${prompt}` : prompt;
 
-      // Run the assistant
+      // Run the assistant with optional images
       const response = await runAssistantOnThread(
         assistantId,
         threadId,
         combinedMessage,
-        vectorStoreId
+        vectorStoreId,
+        image_urls
       );
 
       logger.info("Tool completed", { toolName, responseLength: response.length });
@@ -578,7 +623,10 @@ server.tool(
       threadByTool.clear();
       vectorStoreByTool.clear();
 
-      logger.info("All specialists reset", { threadsCleared: threadCount, vectorStoresCleared: vectorStoreCount });
+      logger.info("All specialists reset", {
+        threadsCleared: threadCount,
+        vectorStoresCleared: vectorStoreCount,
+      });
       return {
         content: [
           {
@@ -598,87 +646,82 @@ server.tool(
 /**
  * List current status of all specialists
  */
-server.tool(
-  TOOL_NAMES.LIST_STATUS,
-  {},
-  async (): Promise<ToolResponse> => {
-    const status = {
-      threads: Object.fromEntries(threadByTool),
-      vectorStores: Object.fromEntries(vectorStoreByTool),
-      uploadedFiles: uploadedFileIdByPath.size,
-      config: {
-        pollTimeoutMs: config.pollTimeoutMs,
-        openaiBaseUrl: config.openaiBaseUrl,
-        maxCacheSize: config.maxCacheSize,
-      },
-    };
+server.tool(TOOL_NAMES.LIST_STATUS, {}, async (): Promise<ToolResponse> => {
+  const status = {
+    threads: Object.fromEntries(threadByTool),
+    vectorStores: Object.fromEntries(vectorStoreByTool),
+    uploadedFiles: uploadedFileIdByPath.size,
+    config: {
+      pollTimeoutMs: config.pollTimeoutMs,
+      openaiBaseUrl: config.openaiBaseUrl,
+      maxCacheSize: config.maxCacheSize,
+    },
+  };
 
-    logger.info("Status requested", { threadCount: threadByTool.size, vectorStoreCount: vectorStoreByTool.size });
-    return {
-      content: [{ type: "text", text: JSON.stringify(status, null, 2) }],
-    };
-  }
-);
+  logger.info("Status requested", {
+    threadCount: threadByTool.size,
+    vectorStoreCount: vectorStoreByTool.size,
+  });
+  return {
+    content: [{ type: "text", text: JSON.stringify(status, null, 2) }],
+  };
+});
 
 /**
  * Health check - verify OpenAI API connectivity
  */
-server.tool(
-  TOOL_NAMES.HEALTH_CHECK,
-  {},
-  async (): Promise<ToolResponse> => {
-    logger.info("Health check initiated");
-    const startTime = Date.now();
+server.tool(TOOL_NAMES.HEALTH_CHECK, {}, async (): Promise<ToolResponse> => {
+  logger.info("Health check initiated");
+  const startTime = Date.now();
 
-    try {
-      // Make a simple API call to verify connectivity
-      await openaiFetch<{ data: unknown[] }>("/models", undefined, "GET");
-      const latencyMs = Date.now() - startTime;
+  try {
+    // Make a simple API call to verify connectivity
+    await openaiFetch<{ data: unknown[] }>("/models", undefined, "GET");
+    const latencyMs = Date.now() - startTime;
 
-      logger.info("Health check passed", { latencyMs });
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                status: "healthy",
-                latencyMs,
-                openaiBaseUrl: config.openaiBaseUrl,
-                timestamp: new Date().toISOString(),
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    } catch (error) {
-      const latencyMs = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.info("Health check passed", { latencyMs });
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              status: "healthy",
+              latencyMs,
+              openaiBaseUrl: config.openaiBaseUrl,
+              timestamp: new Date().toISOString(),
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  } catch (error) {
+    const latencyMs = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : String(error);
 
-      logger.error("Health check failed", { latencyMs, error: errorMessage });
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                status: "unhealthy",
-                error: errorMessage,
-                latencyMs,
-                openaiBaseUrl: config.openaiBaseUrl,
-                timestamp: new Date().toISOString(),
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
+    logger.error("Health check failed", { latencyMs, error: errorMessage });
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              status: "unhealthy",
+              error: errorMessage,
+              latencyMs,
+              openaiBaseUrl: config.openaiBaseUrl,
+              timestamp: new Date().toISOString(),
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
   }
-);
+});
 
 // ============================================================================
 // Graceful Shutdown
@@ -690,7 +733,9 @@ let isShuttingDown = false;
  * Handle graceful shutdown
  */
 async function shutdown(signal: string): Promise<void> {
-  if (isShuttingDown) return;
+  if (isShuttingDown) {
+    return;
+  }
   isShuttingDown = true;
 
   logger.info("Shutdown initiated", { signal });
@@ -747,4 +792,3 @@ const transport = new StdioServerTransport();
 await server.connect(transport);
 
 logger.info("MCP server connected and ready");
-

@@ -1,8 +1,208 @@
 # OpenAI Assistants MCP Bridge
 
-An MCP (Model Context Protocol) server that bridges MCP clients (like Cursor) to OpenAI's Assistants API. This enables AI coding assistants to leverage specialized OpenAI Assistants for UX review, UI critique, accessibility analysis, and more.
+Get expert AI feedback on your product designs directly in Cursor. This tool connects Cursor to specialized OpenAI Assistants that can review your UX, UI, accessibility, and content.
 
-## Architecture
+## What Does This Do?
+
+When you install this MCP (Model Context Protocol) server, you get access to 6 AI design experts inside Cursor:
+
+| Expert | What They Help With |
+|--------|---------------------|
+| **UX Consultant** | Reviews user experience, identifies friction points, suggests improvements |
+| **Personas & Journeys** | Helps define user personas and map user journeys |
+| **UI Critique** | Reviews visual design - layout, typography, colors, spacing |
+| **Microcopy Editor** | Improves button labels, error messages, tooltips, and other UI text |
+| **Accessibility Reviewer** | Checks WCAG 2.2 compliance and accessibility issues |
+| **Product Design Super-Agent** | Comprehensive review covering all of the above |
+
+Each expert remembers your conversation, so you can have back-and-forth discussions about your designs.
+
+---
+
+## Quick Start Guide
+
+### What You'll Need
+
+- [Node.js](https://nodejs.org/) version 18 or higher
+- An [OpenAI API key](https://platform.openai.com/api-keys) (requires a paid OpenAI account)
+- [Cursor](https://cursor.sh/) IDE
+
+### Step 1: Download and Install
+
+Open your terminal and run these commands one at a time:
+
+```bash
+# Download the project
+git clone <repository-url>
+
+# Go into the project folder
+cd openai-assistants-mcp-bridge
+
+# Install required packages (this may take a minute)
+npm install
+
+# Build the project
+npm run build
+```
+
+### Step 2: Get Your OpenAI API Key
+
+1. Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+2. Click "Create new secret key"
+3. Copy the key (it starts with `sk-`)
+4. Keep this key safe - you'll need it in the next steps
+
+### Step 3: Create the AI Assistants
+
+The assistants are the AI experts that will review your designs. Run this command to create them:
+
+**On Mac/Linux:**
+```bash
+export OPENAI_API_KEY=sk-paste-your-key-here
+npm run create-assistants
+```
+
+**On Windows (Command Prompt):**
+```bash
+set OPENAI_API_KEY=sk-paste-your-key-here
+npm run create-assistants
+```
+
+**On Windows (PowerShell):**
+```bash
+$env:OPENAI_API_KEY="sk-paste-your-key-here"
+npm run create-assistants
+```
+
+You'll see output like this:
+
+```
+Creating: UX Consultant (Complex SaaS)...
+  Created successfully!
+  ID: asst_abc123...
+
+...
+
+Environment Variables for .env file:
+==================================
+
+OPENAI_ASSISTANT_A11Y=asst_xxxxx
+OPENAI_ASSISTANT_MICROCOPY=asst_xxxxx
+OPENAI_ASSISTANT_PERSONAS=asst_xxxxx
+OPENAI_ASSISTANT_SUPER=asst_xxxxx
+OPENAI_ASSISTANT_UI=asst_xxxxx
+OPENAI_ASSISTANT_UX=asst_xxxxx
+```
+
+**Keep this output - you'll need it for the next step!**
+
+### Step 4: Connect to Cursor
+
+1. Open Cursor
+2. Open Settings (Cmd+, on Mac, Ctrl+, on Windows)
+3. Search for "MCP" in settings
+4. Click "Edit in mcp.json"
+5. Add this configuration (replace the placeholder values with your actual keys):
+
+```json
+{
+  "mcpServers": {
+    "openai-assistants-bridge": {
+      "command": "node",
+      "args": ["/full/path/to/openai-assistants-mcp-bridge/dist/index.js"],
+      "env": {
+        "OPENAI_API_KEY": "sk-paste-your-key-here",
+        "OPENAI_ASSISTANT_UX": "asst_paste-from-step-3",
+        "OPENAI_ASSISTANT_PERSONAS": "asst_paste-from-step-3",
+        "OPENAI_ASSISTANT_UI": "asst_paste-from-step-3",
+        "OPENAI_ASSISTANT_MICROCOPY": "asst_paste-from-step-3",
+        "OPENAI_ASSISTANT_A11Y": "asst_paste-from-step-3",
+        "OPENAI_ASSISTANT_SUPER": "asst_paste-from-step-3"
+      }
+    }
+  }
+}
+```
+
+**Important:** Replace `/full/path/to/openai-assistants-mcp-bridge` with the actual path where you downloaded the project. For example:
+- Mac: `/Users/yourname/openai-assistants-mcp-bridge`
+- Windows: `C:\\Users\\yourname\\openai-assistants-mcp-bridge`
+
+6. Save the file and restart Cursor
+
+### Step 5: Start Using It!
+
+In Cursor's chat, you can now ask the AI to use any of the design experts. Try these example prompts:
+
+- "Use the UX consultant to review this login flow"
+- "Ask the accessibility reviewer to check this form"
+- "Get microcopy suggestions for these error messages"
+- "Have the super agent do a full review of this dashboard design"
+
+---
+
+## Troubleshooting
+
+### "Command not found: node"
+
+You need to install Node.js. Download it from [nodejs.org](https://nodejs.org/) (choose the LTS version).
+
+### "Missing required environment variable"
+
+Make sure you've added all the environment variables to your `mcp.json` file, including your `OPENAI_API_KEY` and all 6 assistant IDs.
+
+### "OPENAI_API_KEY is required"
+
+Your API key isn't set. Make sure you:
+1. Have a valid OpenAI API key from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+2. Have added billing/payment to your OpenAI account
+3. Copied the key correctly (it should start with `sk-`)
+
+### The assistants aren't responding
+
+1. Check that your OpenAI account has available credits
+2. Make sure you copied the assistant IDs correctly from Step 3
+3. Try restarting Cursor
+
+---
+
+## Available Tools
+
+Once connected, these tools are available in Cursor:
+
+| Tool Name | What It Does |
+|-----------|--------------|
+| `ux_consultant_review` | Get UX feedback and recommendations |
+| `personas_and_journeys` | Work on user personas and journey maps |
+| `ui_critique` | Get visual design feedback |
+| `microcopy_rewrite` | Improve UI text and copy |
+| `a11y_review` | Check accessibility compliance |
+| `super_agent_review` | Get comprehensive design feedback |
+| `reset_all_specialists` | Start fresh conversations with all experts |
+| `list_specialists_status` | See current session status |
+| `check_openai_connection` | Verify the connection is working |
+
+### Tool Options
+
+When using any of the design expert tools, you can include:
+
+| Option | Description |
+|--------|-------------|
+| `prompt` | Your question or what you want reviewed (required) |
+| `context` | Additional background information |
+| `files` | File paths to include in the review |
+| `image_urls` | URLs of screenshots or mockups to review |
+| `reset_thread` | Start a fresh conversation (forgets previous context) |
+| `reset_files` | Clear previously uploaded files |
+
+---
+
+## For Developers
+
+<details>
+<summary>Click to expand development documentation</summary>
+
+### Architecture
 
 ```mermaid
 flowchart TB
@@ -21,9 +221,6 @@ flowchart TB
             Microcopy[microcopy_rewrite]
             A11y[a11y_review]
             Super[super_agent_review]
-            Reset[reset_all_specialists]
-            ListStatus[list_specialists_status]
-            HealthCheck[check_openai_connection]
         end
         
         subgraph State [In-Memory State]
@@ -57,167 +254,7 @@ flowchart TB
     Runs --> Assistants
 ```
 
-## Features
-
-- **6 Specialist Tools**: Each tool connects to a dedicated OpenAI Assistant
-  - `ux_consultant_review` - UX design review and recommendations
-  - `personas_and_journeys` - User persona and journey analysis
-  - `ui_critique` - Visual UI design critique
-  - `microcopy_rewrite` - Copy and content improvement
-  - `a11y_review` - Accessibility audit and WCAG compliance
-  - `super_agent_review` - Comprehensive multi-aspect review
-
-- **Conversation Persistence**: Each tool maintains its own thread for context continuity
-- **File Search**: Upload files to vector stores for RAG-powered analysis
-- **Robust Error Handling**: Retry logic with exponential backoff
-- **Configurable**: Timeout, base URL, and logging via environment variables
-- **Observability**: Structured JSON logging and health check endpoint
-
-## Prerequisites
-
-- Node.js >= 18.0.0
-- OpenAI API key with Assistants API access
-- 6 pre-configured OpenAI Assistants (one for each specialist)
-
-## Installation
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd openai-assistants-mcp-bridge
-
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
-```
-
-## Configuration
-
-### Quick Setup
-
-```bash
-# Copy the example environment file
-cp .env.example .env
-
-# Edit .env with your values
-nano .env  # or use your preferred editor
-```
-
-The server automatically loads environment variables from a `.env` file in the project root.
-
-### Required Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `OPENAI_API_KEY` | Your OpenAI API key |
-| `OPENAI_ASSISTANT_UX` | Assistant ID for UX consultant |
-| `OPENAI_ASSISTANT_PERSONAS` | Assistant ID for personas/journeys |
-| `OPENAI_ASSISTANT_UI` | Assistant ID for UI critique |
-| `OPENAI_ASSISTANT_MICROCOPY` | Assistant ID for microcopy |
-| `OPENAI_ASSISTANT_A11Y` | Assistant ID for accessibility |
-| `OPENAI_ASSISTANT_SUPER` | Assistant ID for super agent |
-
-### Optional Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI API base URL |
-| `OPENAI_POLL_TIMEOUT_MS` | `90000` | Max time to wait for assistant response |
-| `LOG_LEVEL` | `info` | Minimum log level (debug, info, warn, error) |
-| `LOG_ENABLED` | `true` | Enable/disable logging |
-
-### Example `.env` File
-
-```bash
-# Required
-OPENAI_API_KEY=sk-your-api-key-here
-
-# Assistant IDs (get these from OpenAI platform)
-OPENAI_ASSISTANT_UX=asst_xxxxxxxxxxxxx
-OPENAI_ASSISTANT_PERSONAS=asst_xxxxxxxxxxxxx
-OPENAI_ASSISTANT_UI=asst_xxxxxxxxxxxxx
-OPENAI_ASSISTANT_MICROCOPY=asst_xxxxxxxxxxxxx
-OPENAI_ASSISTANT_A11Y=asst_xxxxxxxxxxxxx
-OPENAI_ASSISTANT_SUPER=asst_xxxxxxxxxxxxx
-
-# Optional configuration
-OPENAI_POLL_TIMEOUT_MS=120000
-LOG_LEVEL=debug
-```
-
-See `.env.example` for a complete template with all available options.
-
-## Usage
-
-### Running the Server
-
-```bash
-# Start the MCP server
-npm start
-
-# Or run directly
-node dist/index.js
-```
-
-### Cursor Integration
-
-Add this to your Cursor MCP settings (`.cursor/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "openai-assistants-bridge": {
-      "command": "node",
-      "args": ["/path/to/openai-assistants-mcp-bridge/dist/index.js"],
-      "env": {
-        "OPENAI_API_KEY": "sk-your-api-key",
-        "OPENAI_ASSISTANT_UX": "asst_xxx",
-        "OPENAI_ASSISTANT_PERSONAS": "asst_xxx",
-        "OPENAI_ASSISTANT_UI": "asst_xxx",
-        "OPENAI_ASSISTANT_MICROCOPY": "asst_xxx",
-        "OPENAI_ASSISTANT_A11Y": "asst_xxx",
-        "OPENAI_ASSISTANT_SUPER": "asst_xxx"
-      }
-    }
-  }
-}
-```
-
-## Tool Reference
-
-### Specialist Tools
-
-All specialist tools share the same input schema:
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `prompt` | string | Yes | The request/content to send to the assistant |
-| `context` | string | No | Additional context (constraints, criteria, etc.) |
-| `files` | string[] | No | Local file paths to upload for file search |
-| `reset_thread` | boolean | No | Start a fresh conversation thread |
-| `reset_files` | boolean | No | Clear the tool's vector store |
-
-### Utility Tools
-
-#### `reset_all_specialists`
-
-Reset all threads and vector stores for all specialists.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `confirm` | boolean | true | Confirm the reset action |
-
-#### `list_specialists_status`
-
-Get current status of all specialists including active threads, vector stores, and configuration.
-
-#### `check_openai_connection`
-
-Health check to verify OpenAI API connectivity and measure latency.
-
-## Development
+### Development Commands
 
 ```bash
 # Build the project
@@ -226,49 +263,106 @@ npm run build
 # Watch mode for development
 npm run dev
 
-# Run linting (when configured)
+# Run linting
 npm run lint
 
-# Run tests (when configured)
+# Fix auto-fixable lint issues
+npm run lint:fix
+
+# Format code with Prettier
+npm run format
+
+# Check formatting without writing
+npm run format:check
+
+# Run tests
 npm test
 ```
 
-## Project Structure
+### Pre-commit Hooks
+
+This project uses [Husky](https://typicode.github.io/husky/) and [lint-staged](https://github.com/lint-staged/lint-staged) to run checks before each commit:
+
+- **ESLint** - Lints and auto-fixes staged `.ts` and `.js` files
+- **Prettier** - Formats staged files
+- **Tests** - Runs the test suite
+
+To skip hooks temporarily (not recommended):
+
+```bash
+git commit --no-verify -m "Your message"
+```
+
+### Project Structure
 
 ```
 openai-assistants-mcp-bridge/
 ├── src/
-│   ├── index.ts          # Main server entry point
-│   ├── types.ts          # TypeScript type definitions
-│   ├── constants.ts      # Configuration constants
+│   ├── index.ts              # Main server entry point
+│   ├── types.ts              # TypeScript type definitions
+│   ├── constants.ts          # Configuration constants
 │   └── utils/
-│       ├── logger.ts     # Structured logging utility
-│       └── retry.ts      # Retry with exponential backoff
+│       ├── logger.ts         # Structured logging utility
+│       └── retry.ts          # Retry with exponential backoff
+├── scripts/
+│   └── create-assistants.ts  # Script to create OpenAI Assistants
 ├── tests/
 │   └── utils/
 │       ├── logger.test.ts
 │       └── retry.test.ts
-├── dist/                 # Compiled JavaScript output
-├── .env.example          # Environment variables template
+├── dist/                     # Compiled JavaScript output
+├── .husky/                   # Git hooks (pre-commit)
+├── .env.example              # Environment variables template
+├── .nvmrc                    # Node version for nvm users
+├── .prettierrc               # Prettier configuration
+├── assistants-creation.md    # Detailed assistant configurations
+├── eslint.config.js          # ESLint configuration
 ├── package.json
-├── tsconfig.json
-├── vitest.config.ts      # Test configuration
+├── tsconfig.json             # TypeScript config (includes all files)
+├── tsconfig.build.json       # TypeScript config for production build
+├── vitest.config.ts          # Test configuration
 └── README.md
 ```
 
-## Logging
+### Environment Variables
 
-The server outputs structured JSON logs to stderr (to avoid interfering with MCP's stdio transport). Example:
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OPENAI_API_KEY` | Yes | - | Your OpenAI API key |
+| `OPENAI_ASSISTANT_UX` | Yes | - | Assistant ID for UX consultant |
+| `OPENAI_ASSISTANT_PERSONAS` | Yes | - | Assistant ID for personas/journeys |
+| `OPENAI_ASSISTANT_UI` | Yes | - | Assistant ID for UI critique |
+| `OPENAI_ASSISTANT_MICROCOPY` | Yes | - | Assistant ID for microcopy |
+| `OPENAI_ASSISTANT_A11Y` | Yes | - | Assistant ID for accessibility |
+| `OPENAI_ASSISTANT_SUPER` | Yes | - | Assistant ID for super agent |
+| `OPENAI_BASE_URL` | No | `https://api.openai.com/v1` | OpenAI API base URL |
+| `OPENAI_POLL_TIMEOUT_MS` | No | `90000` | Max wait time for responses (ms) |
+| `LOG_LEVEL` | No | `info` | Log level (debug, info, warn, error) |
+| `LOG_ENABLED` | No | `true` | Enable/disable logging |
+
+### Logging
+
+The server outputs structured JSON logs to stderr. Example:
 
 ```json
-{"timestamp":"2024-01-15T10:30:00.000Z","level":"info","message":"Tool invoked","context":{"toolName":"ux_consultant_review","hasContext":true,"fileCount":2}}
+{"timestamp":"2024-01-15T10:30:00.000Z","level":"info","message":"Tool invoked","context":{"toolName":"ux_consultant_review"}}
 ```
 
-## Error Handling
+### Error Handling
 
 - **Retry Logic**: Transient errors (429, 500, 503) are automatically retried with exponential backoff
 - **Graceful Shutdown**: SIGTERM/SIGINT handlers ensure clean server shutdown
 - **File Validation**: File paths are validated to prevent directory traversal attacks
+
+</details>
+
+---
+
+## Learn More
+
+- [Detailed Assistant Configurations](./assistants-creation.md) - Full prompts and settings for each AI expert
+- [OpenAI Assistants API](https://platform.openai.com/docs/assistants/overview) - Official OpenAI documentation
+- [Model Context Protocol](https://modelcontextprotocol.io/) - Learn about MCP
 
 ## License
 

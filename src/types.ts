@@ -198,7 +198,14 @@ export interface OpenAIFile {
   bytes: number;
   created_at: number;
   filename: string;
-  purpose: "assistants" | "assistants_output" | "batch" | "batch_output" | "fine-tune" | "fine-tune-results" | "vision";
+  purpose:
+    | "assistants"
+    | "assistants_output"
+    | "batch"
+    | "batch_output"
+    | "fine-tune"
+    | "fine-tune-results"
+    | "vision";
   status: "uploaded" | "processed" | "error";
   status_details?: string;
 }
@@ -227,6 +234,7 @@ export interface ToolInput {
   prompt: string;
   context?: string;
   files?: string[];
+  image_urls?: string[];
   reset_thread?: boolean;
   reset_files?: boolean;
 }

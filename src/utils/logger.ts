@@ -50,7 +50,9 @@ const config: LoggerConfig = {
  * Check if a log level should be output based on current configuration
  */
 function shouldLog(level: LogLevel): boolean {
-  if (!config.enabled) return false;
+  if (!config.enabled) {
+    return false;
+  }
   return LOG_LEVEL_VALUES[level] >= LOG_LEVEL_VALUES[config.minLevel];
 }
 
@@ -58,7 +60,9 @@ function shouldLog(level: LogLevel): boolean {
  * Format and output a log entry
  */
 function log(level: LogLevel, message: string, context?: Record<string, unknown>): void {
-  if (!shouldLog(level)) return;
+  if (!shouldLog(level)) {
+    return;
+  }
 
   const entry: LogEntry = {
     timestamp: new Date().toISOString(),

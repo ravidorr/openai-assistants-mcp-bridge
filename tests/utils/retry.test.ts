@@ -50,9 +50,9 @@ describe("retry utility", () => {
     it("should not retry on non-retryable errors", async () => {
       const fn = vi.fn().mockRejectedValue(new HttpError("Not found", 404));
 
-      await expect(
-        withRetry(fn, { maxRetries: 3, initialDelayMs: 100 })
-      ).rejects.toThrow("Not found");
+      await expect(withRetry(fn, { maxRetries: 3, initialDelayMs: 100 })).rejects.toThrow(
+        "Not found"
+      );
       expect(fn).toHaveBeenCalledTimes(1);
     });
 
@@ -63,10 +63,7 @@ describe("retry utility", () => {
       const resultPromise = withRetry(fn, { maxRetries: 2, initialDelayMs: 100 });
 
       // Run timers and await the rejection together
-      const [, error] = await Promise.all([
-        vi.runAllTimersAsync(),
-        resultPromise.catch((e) => e),
-      ]);
+      const [, error] = await Promise.all([vi.runAllTimersAsync(), resultPromise.catch((e) => e)]);
       expect(error).toBeInstanceOf(HttpError);
       if (error instanceof HttpError) {
         expect(error.message).toBe("Server error");
@@ -76,10 +73,7 @@ describe("retry utility", () => {
 
     it("should use custom isRetryable function", async () => {
       const customError = new Error("Custom error");
-      const fn = vi
-        .fn()
-        .mockRejectedValueOnce(customError)
-        .mockResolvedValue("success");
+      const fn = vi.fn().mockRejectedValueOnce(customError).mockResolvedValue("success");
 
       const resultPromise = withRetry(fn, {
         maxRetries: 3,

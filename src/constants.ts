@@ -43,19 +43,19 @@ export const FAILED_RUN_STATUSES: Set<string> = new Set([
 export const DEFAULTS = {
   /** Default OpenAI API base URL */
   OPENAI_BASE_URL: "https://api.openai.com/v1",
-  
+
   /** Default polling timeout in milliseconds (90 seconds) */
   POLL_TIMEOUT_MS: 90_000,
-  
+
   /** Default polling interval in milliseconds */
   POLL_INTERVAL_MS: 500,
-  
+
   /** Default max retries for API calls */
   MAX_RETRIES: 3,
-  
+
   /** Default max cache size for Maps */
   MAX_CACHE_SIZE: 100,
-  
+
   /** Default messages limit when fetching thread messages */
   MESSAGES_LIMIT: 10,
 } as const;

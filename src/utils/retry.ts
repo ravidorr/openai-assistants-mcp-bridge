@@ -91,10 +91,7 @@ function sleep(ms: number): Promise<void> {
  * );
  * ```
  */
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const {
     maxRetries = DEFAULTS.MAX_RETRIES,
     initialDelayMs = 1000,
