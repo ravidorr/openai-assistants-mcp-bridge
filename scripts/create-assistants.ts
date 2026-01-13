@@ -410,14 +410,49 @@ async function main() {
     console.log(`${config.envVar}=${assistant.id}`);
   }
 
+  // Generate mcpServers config
+  console.log("\n==================================");
+  console.log("Cursor MCP Configuration (mcp.json):");
+  console.log("==================================\n");
+
+  // Build assistant IDs map
+  const assistantIds: Record<string, string> = {};
+  for (const { config, assistant } of alreadyExists) {
+    assistantIds[config.envVar] = assistant.id;
+  }
+
+  // Get the project path
+  const projectPath = process.cwd();
+
+  const mcpConfig = {
+    mcpServers: {
+      "openai-assistants-bridge": {
+        command: "node",
+        args: [`${projectPath}/dist/index.js`],
+        env: {
+          OPENAI_API_KEY: "sk-paste-your-api-key-here",
+          OPENAI_ASSISTANT_UX: assistantIds["OPENAI_ASSISTANT_UX"] || "",
+          OPENAI_ASSISTANT_PERSONAS: assistantIds["OPENAI_ASSISTANT_PERSONAS"] || "",
+          OPENAI_ASSISTANT_UI: assistantIds["OPENAI_ASSISTANT_UI"] || "",
+          OPENAI_ASSISTANT_MICROCOPY: assistantIds["OPENAI_ASSISTANT_MICROCOPY"] || "",
+          OPENAI_ASSISTANT_A11Y: assistantIds["OPENAI_ASSISTANT_A11Y"] || "",
+          OPENAI_ASSISTANT_SUPER: assistantIds["OPENAI_ASSISTANT_SUPER"] || "",
+        },
+      },
+    },
+  };
+
+  console.log(JSON.stringify(mcpConfig, null, 2));
+
   console.log("\n==================================");
   console.log("Done!");
   console.log("==================================\n");
   console.log("Next steps:");
-  console.log("1. Copy the environment variables above to your .env file");
-  console.log("2. Ensure OPENAI_API_KEY is also set in your .env file");
-  console.log("3. Run 'npm run build' to compile the project");
-  console.log("4. Run 'npm start' to start the MCP server");
+  console.log("1. Open Cursor Settings (Cmd+, on Mac)");
+  console.log("2. Search for 'MCP' and click 'Edit in mcp.json'");
+  console.log("3. Copy the JSON configuration above into mcp.json");
+  console.log("4. Replace 'sk-paste-your-api-key-here' with your actual OpenAI API key");
+  console.log("5. Save the file and restart Cursor");
 }
 
 main().catch((error) => {

@@ -4,7 +4,7 @@ Get expert AI feedback on your product designs directly in Cursor. This tool con
 
 ## What Does This Do?
 
-When you install this MCP (Model Context Protocol) server, you get access to 6 AI design experts inside Cursor:
+When you install this MCP (Model Context Protocol) server, you get access to six AI design experts inside Cursor:
 
 | Expert | What They Help With |
 |--------|---------------------|
@@ -23,17 +23,23 @@ Each expert remembers your conversation, so you can have back-and-forth discussi
 
 ### What You'll Need
 
-- [Node.js](https://nodejs.org/) version 18 or higher
-- An [OpenAI API key](https://platform.openai.com/api-keys) (requires a paid OpenAI account)
-- [Cursor](https://cursor.sh/) IDE
+- Node.js version 18 or higher
+- An OpenAI API key
+- [Cursor IDE](https://cursor.sh/)
 
-### Step 1: Download and Install
+### Step 1: Install Node.js
+
+1. Open Pendo Self Service (jamf)
+2. Search for `Node.js`
+3. Install the Node.js version 20.19.5
+
+### Step 2: Download and Install
 
 Open your terminal and run these commands one at a time:
 
 ```bash
 # Download the project
-git clone <repository-url>
+git clone https://github.com/ravidorr/openai-assistants-mcp-bridge.git
 
 # Go into the project folder
 cd openai-assistants-mcp-bridge
@@ -45,92 +51,59 @@ npm install
 npm run build
 ```
 
-### Step 2: Get Your OpenAI API Key
+### Step 3: Get Your OpenAI API Key
 
 1. Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 2. Click "Create new secret key"
 3. Copy the key (it starts with `sk-`)
 4. Keep this key safe - you'll need it in the next steps
 
-### Step 3: Create the AI Assistants
+### Step 4: Create the AI Assistants
 
 The assistants are the AI experts that will review your designs. Run this command to create them:
 
-**On Mac/Linux:**
 ```bash
 export OPENAI_API_KEY=sk-paste-your-key-here
 npm run create-assistants
 ```
 
-**On Windows (Command Prompt):**
-```bash
-set OPENAI_API_KEY=sk-paste-your-key-here
-npm run create-assistants
-```
-
-**On Windows (PowerShell):**
-```bash
-$env:OPENAI_API_KEY="sk-paste-your-key-here"
-npm run create-assistants
-```
-
-You'll see output like this:
+The script will create all 6 assistants and output a ready-to-use configuration for Cursor:
 
 ```
 Creating: UX Consultant (Complex SaaS)...
   Created successfully!
-  ID: asst_abc123...
-
 ...
 
-Environment Variables for .env file:
+Cursor MCP Configuration (mcp.json):
 ==================================
 
-OPENAI_ASSISTANT_A11Y=asst_xxxxx
-OPENAI_ASSISTANT_MICROCOPY=asst_xxxxx
-OPENAI_ASSISTANT_PERSONAS=asst_xxxxx
-OPENAI_ASSISTANT_SUPER=asst_xxxxx
-OPENAI_ASSISTANT_UI=asst_xxxxx
-OPENAI_ASSISTANT_UX=asst_xxxxx
-```
-
-**Keep this output - you'll need it for the next step!**
-
-### Step 4: Connect to Cursor
-
-1. Open Cursor
-2. Open Settings (Cmd+, on Mac, Ctrl+, on Windows)
-3. Search for "MCP" in settings
-4. Click "Edit in mcp.json"
-5. Add this configuration (replace the placeholder values with your actual keys):
-
-```json
 {
   "mcpServers": {
     "openai-assistants-bridge": {
       "command": "node",
-      "args": ["/full/path/to/openai-assistants-mcp-bridge/dist/index.js"],
+      "args": ["/Users/yourname/openai-assistants-mcp-bridge/dist/index.js"],
       "env": {
-        "OPENAI_API_KEY": "sk-paste-your-key-here",
-        "OPENAI_ASSISTANT_UX": "asst_paste-from-step-3",
-        "OPENAI_ASSISTANT_PERSONAS": "asst_paste-from-step-3",
-        "OPENAI_ASSISTANT_UI": "asst_paste-from-step-3",
-        "OPENAI_ASSISTANT_MICROCOPY": "asst_paste-from-step-3",
-        "OPENAI_ASSISTANT_A11Y": "asst_paste-from-step-3",
-        "OPENAI_ASSISTANT_SUPER": "asst_paste-from-step-3"
+        "OPENAI_API_KEY": "sk-paste-your-api-key-here",
+        "OPENAI_ASSISTANT_UX": "asst_xxxxx",
+        "OPENAI_ASSISTANT_PERSONAS": "asst_xxxxx",
+        ...
       }
     }
   }
 }
 ```
 
-**Important:** Replace `/full/path/to/openai-assistants-mcp-bridge` with the actual path where you downloaded the project. For example:
-- Mac: `/Users/yourname/openai-assistants-mcp-bridge`
-- Windows: `C:\\Users\\yourname\\openai-assistants-mcp-bridge`
+### Step 5: Connect to Cursor
 
-6. Save the file and restart Cursor
+1. Open Cursor
+2. Open Settings (Cmd+, on Mac)
+3. Search for "MCP" in settings
+4. Click "Edit in mcp.json"
+5. Copy the JSON configuration from the script output and paste it into `mcp.json`
+6. Replace `sk-paste-your-api-key-here` with your actual OpenAI API key
+7. Save the file and restart Cursor
 
-### Step 5: Start Using It!
+### Step 6: Start Using It!
 
 In Cursor's chat, you can now ask the AI to use any of the design experts. Try these example prompts:
 
