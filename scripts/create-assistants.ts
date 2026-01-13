@@ -5,28 +5,181 @@
  * This script creates all the specialized OpenAI Assistants for the MCP bridge.
  * Run with: npx tsx scripts/create-assistants.ts
  *
- * Prerequisites:
- * - OPENAI_API_KEY environment variable must be set
- * - Or create a .env file in the project root with OPENAI_API_KEY=sk-...
+ * Features:
+ * - Prompts for OpenAI API key if not set
+ * - Creates all 6 AI assistants
+ * - Offers to automatically configure Cursor's mcp.json
  */
 
 import "dotenv/config";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import * as readline from "readline";
+
+// ============================================================================
+// Interactive Prompt Utilities
+// ============================================================================
+
+function createReadlineInterface(): readline.Interface {
+  return readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+}
+
+async function prompt(rl: readline.Interface, question: string): Promise<string> {
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      resolve(answer.trim());
+    });
+  });
+}
+
+async function promptYesNo(
+  rl: readline.Interface,
+  question: string,
+  defaultYes = true
+): Promise<boolean> {
+  const hint = defaultYes ? "[Y/n]" : "[y/N]";
+  const answer = await prompt(rl, `${question} ${hint}: `);
+  if (answer === "") {
+    return defaultYes;
+  }
+  return answer.toLowerCase().startsWith("y");
+}
+
+async function promptForApiKey(rl: readline.Interface): Promise<string> {
+  console.log("\nOpenAI API Key not found in environment.");
+  console.log("Get your API key from: https://platform.openai.com/api-keys\n");
+
+  const apiKey = await prompt(rl, "Enter your OpenAI API key: ");
+
+  if (!apiKey || !apiKey.startsWith("sk-")) {
+    console.error("\nError: Invalid API key. It should start with 'sk-'");
+    process.exit(1);
+  }
+
+  return apiKey;
+}
+
+// ============================================================================
+// Progress Indicator
+// ============================================================================
+
+class Spinner {
+  private frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+  private currentFrame = 0;
+  private interval: NodeJS.Timeout | null = null;
+  private message: string;
+
+  constructor(message: string) {
+    this.message = message;
+  }
+
+  start(): void {
+    process.stdout.write(`${this.frames[0]} ${this.message}`);
+    this.interval = setInterval(() => {
+      this.currentFrame = (this.currentFrame + 1) % this.frames.length;
+      process.stdout.clearLine(0);
+      process.stdout.cursorTo(0);
+      process.stdout.write(`${this.frames[this.currentFrame]} ${this.message}`);
+    }, 80);
+  }
+
+  stop(finalMessage?: string): void {
+    if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = null;
+    }
+    process.stdout.clearLine(0);
+    process.stdout.cursorTo(0);
+    if (finalMessage) {
+      console.log(finalMessage);
+    }
+  }
+}
+
+// ============================================================================
+// API Key Validation
+// ============================================================================
+
+async function validateApiKey(apiKey: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${OPENAI_BASE_URL}/models`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
+    if (response.status === 401) {
+      return false;
+    }
+
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================================
+// Cursor mcp.json Utilities
+// ============================================================================
+
+function getCursorMcpPath(): string {
+  const homeDir = os.homedir();
+
+  // Common Cursor mcp.json locations by platform
+  const possiblePaths = [
+    path.join(homeDir, ".cursor", "mcp.json"), // Most common
+    path.join(homeDir, "Library", "Application Support", "Cursor", "User", "mcp.json"), // macOS alternative
+    path.join(homeDir, "AppData", "Roaming", "Cursor", "User", "mcp.json"), // Windows
+    path.join(homeDir, ".config", "Cursor", "User", "mcp.json"), // Linux
+  ];
+
+  // Return the first existing path, or default to ~/.cursor/mcp.json
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+
+  // Default path (create in ~/.cursor/)
+  return path.join(homeDir, ".cursor", "mcp.json");
+}
+
+interface McpConfig {
+  mcpServers?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+function readExistingMcpConfig(mcpPath: string): McpConfig {
+  try {
+    if (fs.existsSync(mcpPath)) {
+      const content = fs.readFileSync(mcpPath, "utf-8");
+      return JSON.parse(content) as McpConfig;
+    }
+  } catch {
+    // If we can't read/parse, start fresh
+  }
+  return {};
+}
+
+function writeMcpConfig(mcpPath: string, config: McpConfig): void {
+  const dir = path.dirname(mcpPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(mcpPath, JSON.stringify(config, null, 2) + "\n");
+}
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+let OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
-
-if (!OPENAI_API_KEY) {
-  console.error("Error: OPENAI_API_KEY environment variable is required.");
-  console.error("");
-  console.error("Set it via:");
-  console.error("  1. export OPENAI_API_KEY=sk-your-key-here");
-  console.error("  2. Or add to .env file: OPENAI_API_KEY=sk-your-key-here");
-  process.exit(1);
-}
 
 // ============================================================================
 // Types
@@ -339,120 +492,182 @@ async function main() {
   console.log("OpenAI Assistants Creation Script");
   console.log("==================================\n");
 
-  // Check for existing assistants
-  console.log("Checking for existing assistants...\n");
-  const existingAssistants = await listAssistants();
+  const rl = createReadlineInterface();
 
-  const existingByName = new Map<string, OpenAIAssistant>();
-  for (const assistant of existingAssistants.data) {
-    if (assistant.name) {
-      existingByName.set(assistant.name, assistant);
-    }
-  }
-
-  // Determine which assistants need to be created
-  const toCreate: AssistantConfig[] = [];
-  const alreadyExists: Array<{ config: AssistantConfig; assistant: OpenAIAssistant }> = [];
-
-  for (const config of ASSISTANTS) {
-    const existing = existingByName.get(config.name);
-    if (existing) {
-      alreadyExists.push({ config, assistant: existing });
+  try {
+    // Prompt for API key if not set
+    if (!OPENAI_API_KEY) {
+      OPENAI_API_KEY = await promptForApiKey(rl);
     } else {
-      toCreate.push(config);
+      console.log("Using OpenAI API key from environment.\n");
     }
-  }
 
-  // Report existing assistants
-  if (alreadyExists.length > 0) {
-    console.log("Found existing assistants:");
-    for (const { config, assistant } of alreadyExists) {
-      console.log(`  - ${config.name}`);
-      console.log(`    ID: ${assistant.id}`);
-      console.log(`    ENV: ${config.envVar}=${assistant.id}`);
+    // Validate API key
+    const validationSpinner = new Spinner("Validating API key...");
+    validationSpinner.start();
+
+    const isValid = await validateApiKey(OPENAI_API_KEY);
+
+    if (!isValid) {
+      validationSpinner.stop("API key validation failed.\n");
+      console.error("Error: The API key is invalid or your account doesn't have access.");
+      console.error("Please check:");
+      console.error("  - The API key is correct and active");
+      console.error("  - Your OpenAI account has billing enabled");
+      console.error("  - Your account has available credits\n");
+      process.exit(1);
     }
-    console.log("");
-  }
 
-  // Create new assistants
-  if (toCreate.length === 0) {
-    console.log("All assistants already exist. No new assistants to create.\n");
-  } else {
-    console.log(`Creating ${toCreate.length} new assistant(s)...\n`);
+    validationSpinner.stop("API key validated successfully.\n");
 
-    for (const config of toCreate) {
-      console.log(`Creating: ${config.name}...`);
-      try {
-        const assistant = await createAssistant(config);
-        console.log(`  Created successfully!`);
-        console.log(`  ID: ${assistant.id}`);
-        console.log(`  ENV: ${config.envVar}=${assistant.id}\n`);
-        alreadyExists.push({ config, assistant });
-      } catch (error) {
-        console.error(`  Failed: ${error instanceof Error ? error.message : error}\n`);
+    // Check for existing assistants
+    const checkSpinner = new Spinner("Checking for existing assistants...");
+    checkSpinner.start();
+    const existingAssistants = await listAssistants();
+    checkSpinner.stop("Checked existing assistants.\n");
+
+    const existingByName = new Map<string, OpenAIAssistant>();
+    for (const assistant of existingAssistants.data) {
+      if (assistant.name) {
+        existingByName.set(assistant.name, assistant);
       }
     }
-  }
 
-  // Generate .env output
-  console.log("\n==================================");
-  console.log("Environment Variables for .env file:");
-  console.log("==================================\n");
+    // Determine which assistants need to be created
+    const toCreate: AssistantConfig[] = [];
+    const alreadyExists: Array<{ config: AssistantConfig; assistant: OpenAIAssistant }> = [];
 
-  console.log("# OpenAI Assistants MCP Bridge - Assistant IDs");
-  console.log("# Generated by scripts/create-assistants.ts");
-  console.log(`# Generated at: ${new Date().toISOString()}\n`);
+    for (const config of ASSISTANTS) {
+      const existing = existingByName.get(config.name);
+      if (existing) {
+        alreadyExists.push({ config, assistant: existing });
+      } else {
+        toCreate.push(config);
+      }
+    }
 
-  // Sort by env var name for consistent output
-  alreadyExists.sort((a, b) => a.config.envVar.localeCompare(b.config.envVar));
+    // Report existing assistants
+    if (alreadyExists.length > 0) {
+      console.log("Found existing assistants:");
+      for (const { config, assistant } of alreadyExists) {
+        console.log(`  - ${config.name}`);
+        console.log(`    ID: ${assistant.id}`);
+        console.log(`    ENV: ${config.envVar}=${assistant.id}`);
+      }
+      console.log("");
+    }
 
-  for (const { config, assistant } of alreadyExists) {
-    console.log(`${config.envVar}=${assistant.id}`);
-  }
+    // Create new assistants
+    if (toCreate.length === 0) {
+      console.log("All assistants already exist. No new assistants to create.\n");
+    } else {
+      console.log(`Creating ${toCreate.length} new assistant(s)...\n`);
 
-  // Generate mcpServers config
-  console.log("\n==================================");
-  console.log("Cursor MCP Configuration (mcp.json):");
-  console.log("==================================\n");
+      for (const config of toCreate) {
+        const spinner = new Spinner(`Creating: ${config.name}...`);
+        spinner.start();
+        try {
+          const assistant = await createAssistant(config);
+          spinner.stop(`Created: ${config.name}`);
+          console.log(`  ID: ${assistant.id}`);
+          console.log(`  ENV: ${config.envVar}=${assistant.id}\n`);
+          alreadyExists.push({ config, assistant });
+        } catch (error) {
+          spinner.stop(`Failed: ${config.name}`);
+          console.error(`  Error: ${error instanceof Error ? error.message : error}\n`);
+        }
+      }
+    }
 
-  // Build assistant IDs map
-  const assistantIds: Record<string, string> = {};
-  for (const { config, assistant } of alreadyExists) {
-    assistantIds[config.envVar] = assistant.id;
-  }
+    // Generate .env output
+    console.log("\n==================================");
+    console.log("Environment Variables for .env file:");
+    console.log("==================================\n");
 
-  // Get the project path
-  const projectPath = process.cwd();
+    console.log("# OpenAI Assistants MCP Bridge - Assistant IDs");
+    console.log("# Generated by scripts/create-assistants.ts");
+    console.log(`# Generated at: ${new Date().toISOString()}\n`);
 
-  const mcpConfig = {
-    mcpServers: {
-      "openai-assistants-bridge": {
-        command: "node",
-        args: [`${projectPath}/dist/index.js`],
-        env: {
-          OPENAI_API_KEY: "sk-paste-your-api-key-here",
-          OPENAI_ASSISTANT_UX: assistantIds["OPENAI_ASSISTANT_UX"] || "",
-          OPENAI_ASSISTANT_PERSONAS: assistantIds["OPENAI_ASSISTANT_PERSONAS"] || "",
-          OPENAI_ASSISTANT_UI: assistantIds["OPENAI_ASSISTANT_UI"] || "",
-          OPENAI_ASSISTANT_MICROCOPY: assistantIds["OPENAI_ASSISTANT_MICROCOPY"] || "",
-          OPENAI_ASSISTANT_A11Y: assistantIds["OPENAI_ASSISTANT_A11Y"] || "",
-          OPENAI_ASSISTANT_SUPER: assistantIds["OPENAI_ASSISTANT_SUPER"] || "",
+    // Sort by env var name for consistent output
+    alreadyExists.sort((a, b) => a.config.envVar.localeCompare(b.config.envVar));
+
+    for (const { config, assistant } of alreadyExists) {
+      console.log(`${config.envVar}=${assistant.id}`);
+    }
+
+    // Generate mcpServers config
+    console.log("\n==================================");
+    console.log("Cursor MCP Configuration (mcp.json):");
+    console.log("==================================\n");
+
+    // Build assistant IDs map
+    const assistantIds: Record<string, string> = {};
+    for (const { config, assistant } of alreadyExists) {
+      assistantIds[config.envVar] = assistant.id;
+    }
+
+    // Get the project path
+    const projectPath = process.cwd();
+
+    const mcpConfig = {
+      mcpServers: {
+        "openai-assistants-bridge": {
+          command: "node",
+          args: [`${projectPath}/dist/index.js`],
+          env: {
+            OPENAI_API_KEY: OPENAI_API_KEY,
+            OPENAI_ASSISTANT_UX: assistantIds["OPENAI_ASSISTANT_UX"] || "",
+            OPENAI_ASSISTANT_PERSONAS: assistantIds["OPENAI_ASSISTANT_PERSONAS"] || "",
+            OPENAI_ASSISTANT_UI: assistantIds["OPENAI_ASSISTANT_UI"] || "",
+            OPENAI_ASSISTANT_MICROCOPY: assistantIds["OPENAI_ASSISTANT_MICROCOPY"] || "",
+            OPENAI_ASSISTANT_A11Y: assistantIds["OPENAI_ASSISTANT_A11Y"] || "",
+            OPENAI_ASSISTANT_SUPER: assistantIds["OPENAI_ASSISTANT_SUPER"] || "",
+          },
         },
       },
-    },
-  };
+    };
 
-  console.log(JSON.stringify(mcpConfig, null, 2));
+    console.log(JSON.stringify(mcpConfig, null, 2));
 
-  console.log("\n==================================");
-  console.log("Done!");
-  console.log("==================================\n");
-  console.log("Next steps:");
-  console.log("1. Open Cursor Settings (Cmd+, on Mac)");
-  console.log("2. Search for 'MCP' and click 'Edit in mcp.json'");
-  console.log("3. Copy the JSON configuration above into mcp.json");
-  console.log("4. Replace 'sk-paste-your-api-key-here' with your actual OpenAI API key");
-  console.log("5. Save the file and restart Cursor");
+    // Offer to auto-configure Cursor
+    console.log("\n==================================");
+    console.log("Cursor Configuration");
+    console.log("==================================\n");
+
+    const mcpPath = getCursorMcpPath();
+    const shouldAutoConfigure = await promptYesNo(
+      rl,
+      `Would you like to automatically configure Cursor?\n  (Will update: ${mcpPath})`
+    );
+
+    if (shouldAutoConfigure) {
+      // Read existing config and merge
+      const existingConfig = readExistingMcpConfig(mcpPath);
+      const mergedConfig: McpConfig = {
+        ...existingConfig,
+        mcpServers: {
+          ...(existingConfig.mcpServers || {}),
+          ...mcpConfig.mcpServers,
+        },
+      };
+
+      writeMcpConfig(mcpPath, mergedConfig);
+      console.log(`\nConfiguration written to: ${mcpPath}`);
+      console.log("\nNext step: Restart Cursor and you're ready to go!");
+    } else {
+      console.log("\nManual configuration:");
+      console.log("1. Open Cursor Settings (Cmd+, on Mac)");
+      console.log("2. Search for 'MCP' and click 'Edit in mcp.json'");
+      console.log("3. Copy the JSON configuration above into mcp.json");
+      console.log("4. Save the file and restart Cursor");
+    }
+
+    console.log("\n==================================");
+    console.log("Done!");
+    console.log("==================================");
+  } finally {
+    rl.close();
+  }
 }
 
 main().catch((error) => {

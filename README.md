@@ -19,110 +19,52 @@ Each expert remembers your conversation, so you can have back-and-forth discussi
 
 ---
 
-## Quick Start Guide
+## Quick Start
 
-### What You'll Need
-
-- Node.js version 18 or higher
-- An OpenAI API key
-- [Cursor IDE](https://cursor.sh/)
-
-### Step 1: Install Node.js
-
-1. Open Pendo Self Service (jamf)
-2. Search for `Node.js`
-3. Install the Node.js version 20.19.5
-
-### Step 2: Download and Install
-
-1. Open the terminal
-2. Go to the folder where your projects are i.e.: `~/Documents/Cursor`
-3. In the terminal run:
 ```bash
-# Download the project, open the project folder, instll the project, and build the project
-git clone https://github.com/ravidorr/openai-assistants-mcp-bridge.git && cd openai-assistants-mcp-bridge && npm install && npm run build
-```
-
-### Step 3: Get Your OpenAI API Key
-
-1. Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-2. Click "Create new secret key"
-3. Copy the key (it starts with `sk-`)
-4. Keep this key safe - you'll need it in the next steps
-
-### Step 4: Create the AI Assistants
-
-The assistants are the AI experts that will review your designs. 
-1. In the terminal run this to save your OpenAI API key. Don't forget to replace 'REPLACE_THIS_WITH_YOUR_OPENAI_API_KEY' with your OpenAI API key:
-```bash
-export OPENAI_API_KEY=REPLACE_THIS_WITH_YOUR_OPENAI_API_KEY
-```
-2. In the terminal run this to create your assistants:
-```bash
+git clone https://github.com/ravidorr/openai-assistants-mcp-bridge.git
+cd openai-assistants-mcp-bridge
+npm install && npm run build
 npm run create-assistants
 ```
 
-The script will create all 6 assistants and output a ready-to-use configuration for Cursor:
+The setup script handles everything: prompts for your API key, creates the assistants, and configures Cursor. Just restart Cursor when done.
 
-```
-Creating: UX Consultant (Complex SaaS)...
-  Created successfully!
-...
+---
 
-Cursor MCP Configuration (mcp.json):
-==================================
+## Detailed Setup Guide
 
-{
-  "mcpServers": {
-    "openai-assistants-bridge": {
-      "command": "node",
-      "args": ["/Users/yourname/openai-assistants-mcp-bridge/dist/index.js"],
-      "env": {
-        "OPENAI_API_KEY": "sk-paste-your-api-key-here",
-        "OPENAI_ASSISTANT_UX": "asst_xxxxx",
-        "OPENAI_ASSISTANT_PERSONAS": "asst_xxxxx",
-        ...
-      }
-    }
-  }
-}
+### Prerequisites
+
+- **Node.js 18+**: Download from [nodejs.org](https://nodejs.org/) (LTS version recommended)
+- **OpenAI API key**: Get one from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- **Cursor IDE**: Download from [cursor.sh](https://cursor.sh/)
+
+### Step 1: Download and Build
+
+```bash
+git clone https://github.com/ravidorr/openai-assistants-mcp-bridge.git
+cd openai-assistants-mcp-bridge
+npm install
+npm run build
 ```
 
-### Step 5: Connect to Cursor
+### Step 2: Create Assistants and Configure Cursor
 
-1. Open Cursor
-2. Open Settings (Cmd+, on Mac)
-3. Search for "MCP" in settings
-4. Click "Edit in mcp.json"
-5. If you already have `"mcpServers": {...` in your `mcp.json` add only the `"openai-assistants-bridge": {...}` If you don't have `"mcpServers": {...` in your `mcp.json` add the whole `{"mcpServers": {...}`
-6. In the `openai-assistants-bridge` replace the value of `OPENAI_API_KEY` (`sk-paste-your-api-key-here`) with your actual OpenAI API key
-7. Save the file and *restart* Cursor
+Run the setup script:
 
-### Step 6: (Optional) Enable Browser Automation
+```bash
+npm 
+```
 
-The assistants work best when they can view your designs in the browser. Enable these settings:
+The script will:
+1. Prompt for your OpenAI API key (if not already set via `OPENAI_API_KEY` environment variable)
+2. Create all 6 AI assistants in your OpenAI account
+3. Offer to automatically configure Cursor's `mcp.json` file
 
-1. Open Cursor Settings (Cmd+, on Mac)
-2. Go to **Tools & MCP** in the sidebar
-3. Under **Browser**, set **Browser Automation** to "Browser Tab"
-4. Turn on **Show Localhost Links in Browser**
+If you prefer manual configuration, the script will also display the JSON you can copy.
 
-This allows the assistants to take screenshots and interact with your running app.
-
-### Step 7: (Optional) Install Figma MCP
-
-For reviewing Figma designs, install the Figma MCP:
-
-1. In Cursor Settings, go to **Tools & MCP**
-2. Scroll to **Installed MCP Servers**
-3. Click **Add new MCP server**
-4. Look in the [Guide to the Figma MCP server](https://help.figma.com/hc/en-us/articles/32132100833559-Guide-to-the-Figma-MCP-server) for instrucations and install either:
-   - **Figma** - for reviewing designs via Figma URLs
-   - **Figma Desktop** - for reviewing designs from the Figma desktop app (requires Figma desktop to be running)
-
-Once installed, you can share Figma URLs or selection context with the assistants for design review.
-
-### Step 8: Start Using It!
+### Step 3: Restart Cursor and Start Using It!
 
 In Cursor's chat, you can now ask the AI to use any of the design experts. Try these example prompts:
 
@@ -137,66 +79,43 @@ In Cursor's chat, you can now ask the AI to use any of the design experts. Try t
 
 ### "Command not found: node"
 
-You need to install Node.js. Download it from [nodejs.org](https://nodejs.org/) (choose the LTS version).
+Install Node.js from [nodejs.org](https://nodejs.org/) (LTS version).
 
-### "Missing required environment variable"
+### "Invalid API key" during setup
 
-Make sure you've added all the environment variables to your `mcp.json` file, including your `OPENAI_API_KEY` and all 6 assistant IDs.
+- Get a valid key from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- Ensure your OpenAI account has billing enabled
+- The key should start with `sk-`
 
-### "OPENAI_API_KEY is required"
+### "API key validation failed"
 
-Your API key isn't set. Make sure you:
-1. Have a valid OpenAI API key from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-2. Have added billing/payment to your OpenAI account
-3. Copied the key correctly (it should start with `sk-`)
+The setup script validates your API key before creating assistants. If validation fails:
+- Check your internet connection
+- Verify the API key is correct and active
+- Ensure your OpenAI account has available credits
+
+### Tools not showing in Cursor
+
+1. Verify `mcp.json` was configured (check `~/.cursor/mcp.json`)
+2. Restart Cursor completely (quit and reopen)
+3. Run `npm run create-assistants` again and choose to auto-configure
 
 ### The assistants aren't responding
 
 1. Check that your OpenAI account has available credits
-2. Make sure you copied the assistant IDs correctly from Step 3
+2. Verify the assistant IDs in `mcp.json` match your OpenAI account
 3. Try restarting Cursor
-
----
-
-## Available Tools
-
-Once connected, these tools are available in Cursor:
-
-| Tool Name | What It Does |
-|-----------|--------------|
-| `ux_consultant_review` | Get UX feedback and recommendations |
-| `personas_and_journeys` | Work on user personas and journey maps |
-| `ui_critique` | Get visual design feedback |
-| `microcopy_rewrite` | Improve UI text and copy |
-| `a11y_review` | Check accessibility compliance |
-| `super_agent_review` | Get comprehensive design feedback |
-| `reset_all_specialists` | Start fresh conversations with all experts |
-| `list_specialists_status` | See current session status |
-| `check_openai_connection` | Verify the connection is working |
-
-### Tool Options
-
-When using any of the design expert tools, you can include:
-
-| Option | Description |
-|--------|-------------|
-| `prompt` | Your question or what you want reviewed (required) |
-| `context` | Additional background information |
-| `files` | File paths to include in the review |
-| `image_urls` | URLs of screenshots or mockups to review |
-| `reset_thread` | Start a fresh conversation (forgets previous context) |
-| `reset_files` | Clear previously uploaded files |
 
 ---
 
 ## Updating an Assistant
 
 Need to change an assistant's name or instructions? Use the update wizard:
-1. Open the terminal and navigate to the `openai-assistants-mcp-bridge` project
-2. In the terminal run:
+
 ```bash
 npm run update-assistant
 ```
+
 The wizard will:
 1. Read your `mcp.json` and show a list of configured assistants
 2. Let you select which assistant to update
@@ -230,6 +149,37 @@ Current Assistant:
 Enter new name (press Enter to keep current):
 Do you want to update the instructions? (y/N):
 ```
+
+---
+
+## Available Tools
+
+Once connected, these tools are available in Cursor:
+
+| Tool Name | What It Does |
+|-----------|--------------|
+| `ux_consultant_review` | Get UX feedback and recommendations |
+| `personas_and_journeys` | Work on user personas and journey maps |
+| `ui_critique` | Get visual design feedback |
+| `microcopy_rewrite` | Improve UI text and copy |
+| `a11y_review` | Check accessibility compliance |
+| `super_agent_review` | Get comprehensive design feedback |
+| `reset_all_specialists` | Start fresh conversations with all experts |
+| `list_specialists_status` | See current session status |
+| `check_openai_connection` | Verify the connection is working |
+
+### Tool Options
+
+When using any of the design expert tools, you can include:
+
+| Option | Description |
+|--------|-------------|
+| `prompt` | Your question or what you want reviewed (required) |
+| `context` | Additional background information |
+| `files` | File paths to include in the review |
+| `image_urls` | URLs of screenshots or mockups to review |
+| `reset_thread` | Start a fresh conversation (forgets previous context) |
+| `reset_files` | Clear previously uploaded files |
 
 ---
 
