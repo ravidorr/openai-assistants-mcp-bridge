@@ -98,7 +98,7 @@ Cursor MCP Configuration (mcp.json):
 6. In the `openai-assistants-bridge` replace the value of `OPENAI_API_KEY` (`sk-paste-your-api-key-here`) with your actual OpenAI API key
 7. Save the file and *restart* Cursor
 
-### Step 6: Enable Browser Automation
+### Step 6: (Optional) Enable Browser Automation
 
 The assistants work best when they can view your designs in the browser. Enable these settings:
 
