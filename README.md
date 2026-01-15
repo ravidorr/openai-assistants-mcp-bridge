@@ -32,6 +32,18 @@ The setup wizard handles everything: prompts for your API key, creates the assis
 
 ---
 
+## Tip: Always Use Specialized Tools
+
+To make Cursor always check MCP tools first, add this to the User Rules in Cursor Settings:
+
+> Before performing any specialized task, ALWAYS:
+> 1. List available MCP tools in /mcps/*/tools/ directories
+> 2. Check if a specialized tool exists for the task
+> 3. Use the specialized MCP tool if available, rather than doing the work yourself
+> 4. Only fall back to doing it yourself if no appropriate MCP tool exists
+
+---
+
 ## Detailed Setup Guide
 
 ### Prerequisites
