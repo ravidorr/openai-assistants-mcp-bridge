@@ -25,10 +25,10 @@ Each expert remembers your conversation, so you can have back-and-forth discussi
 git clone https://github.com/ravidorr/openai-assistants-mcp-bridge.git
 cd openai-assistants-mcp-bridge
 npm install && npm run build
-npm run create-assistants
+npm run assistants
 ```
 
-The setup script handles everything: prompts for your API key, creates the assistants, and configures Cursor. Just restart Cursor when done.
+The setup wizard handles everything: prompts for your API key, creates the assistants, and configures Cursor. Just restart Cursor when done.
 
 ---
 
@@ -51,18 +51,20 @@ npm run build
 
 ### Step 2: Create Assistants and Configure Cursor
 
-Run the setup script:
+Run the assistants manager:
 
 ```bash
-npm 
+npm run assistants
 ```
 
-The script will:
+The wizard will:
 1. Prompt for your OpenAI API key (if not already set via `OPENAI_API_KEY` environment variable)
-2. Create all 6 AI assistants in your OpenAI account
-3. Offer to automatically configure Cursor's `mcp.json` file
+2. Check which assistants already exist on your OpenAI account
+3. Show you a status of each assistant (missing, up to date, or changed)
+4. Let you choose which assistants to create or update
+5. Offer to automatically configure Cursor's `mcp.json` file
 
-If you prefer manual configuration, the script will also display the JSON you can copy.
+If you prefer manual configuration, the wizard will also display the environment variables you need.
 
 ### Step 3: Restart Cursor and Start Using It!
 
@@ -98,7 +100,7 @@ The setup script validates your API key before creating assistants. If validatio
 
 1. Verify `mcp.json` was configured (check `~/.cursor/mcp.json`)
 2. Restart Cursor completely (quit and reopen)
-3. Run `npm run create-assistants` again and choose to auto-configure
+3. Run `npm run assistants` again and choose to update Cursor's mcp.json
 
 ### The assistants aren't responding
 
@@ -108,47 +110,72 @@ The setup script validates your API key before creating assistants. If validatio
 
 ---
 
-## Updating an Assistant
+## Managing Assistants
 
-Need to change an assistant's name or instructions? Use the update wizard:
+The unified assistants manager handles both creation and updates:
 
 ```bash
-npm run update-assistant
+npm run assistants
 ```
 
-The wizard will:
-1. Read your `mcp.json` and show a list of configured assistants
-2. Let you select which assistant to update
-3. Show current details and prompt for changes
-4. Confirm before applying updates
+The wizard intelligently detects:
+- **Missing assistants** - Not yet created on OpenAI
+- **Changed assistants** - Local config differs from OpenAI
+- **Up to date** - Already synced
 
 Example:
 ```
 ========================================
-  OpenAI Assistant Update Wizard
+  OpenAI Assistants Manager
 ========================================
 
-Found 6 assistants:
+Checking existing assistants on OpenAI...
 
-  1) UX Consultant
-  2) Personas & Journeys
-  3) UI Critique
-  4) Microcopy Editor
-  5) Accessibility Reviewer
-  6) Super Agent
-  7) Enter a different assistant ID manually
+Status:
+  ✓ Expert UX Agent                    [up to date]
+  ⚡ Expert UI Agent                    [config changed]
+  ✗ Expert Agent in Personas           [not created]
+  ✓ Expert Microcopy Agent             [up to date]
+  ✗ Expert Accessibility Agent         [not created]
+  ✓ Super-Agent                        [up to date]
 
-Select an assistant (1-7): 1
+What would you like to do?
 
-Fetching current assistant details...
+  1) Create missing assistants (2)
+  2) Update changed assistants (1)
+  3) Create missing + Update changed (3 total)
+  4) Select specific assistants to manage
+  5) Sync ALL assistants to match config
+  6) Exit
 
-Current Assistant:
-  Name:  UX Consultant (Complex SaaS)
-  Model: gpt-4o
-
-Enter new name (press Enter to keep current):
-Do you want to update the instructions? (y/N):
+Select option (1-6):
 ```
+
+### Modifying Assistant Instructions
+
+Assistant configurations are stored in individual files under `scripts/lib/assistants/`:
+
+```
+scripts/lib/assistants/
+├── ux.ts           # UX Agent
+├── ui.ts           # UI Agent
+├── personas.ts     # Personas & Journeys Agent
+├── microcopy.ts    # Microcopy Agent
+├── a11y.ts         # Accessibility Agent
+└── super.ts        # Super-Agent
+```
+
+To modify an assistant:
+1. Edit the relevant file in `scripts/lib/assistants/`
+2. Run `npm run generate:assistants` to update the index
+3. Run `npm run assistants` and select "Update changed assistants"
+
+### Adding a New Assistant
+
+1. Create a new file in `scripts/lib/assistants/` (e.g., `newagent.ts`)
+2. Export an `AssistantConfig` object following the existing pattern
+3. Run `npm run generate:assistants` to add it to the index
+4. Run `npm run assistants` to create it on OpenAI
 
 ---
 
@@ -176,10 +203,45 @@ When using any of the design expert tools, you can include:
 |--------|-------------|
 | `prompt` | Your question or what you want reviewed (required) |
 | `context` | Additional background information |
-| `files` | File paths to include in the review |
+| `files` | File paths to include in the review (for document search) |
 | `image_urls` | URLs of screenshots or mockups to review |
+| `image_files` | Local image file paths to upload for visual analysis (PNG, JPG, GIF, WEBP) |
+| `image_base64` | Base64-encoded image data for visual analysis |
+| `image_detail` | Detail level for image analysis: `"auto"` (default), `"low"` (faster/cheaper), or `"high"` (more detailed) |
 | `reset_thread` | Start a fresh conversation (forgets previous context) |
 | `reset_files` | Clear previously uploaded files |
+
+#### Image Input Examples
+
+You can provide images in three ways:
+
+```typescript
+// 1. Via URL (external images)
+{
+  prompt: "Review this design",
+  image_urls: ["https://example.com/screenshot.png"]
+}
+
+// 2. Via local file path (uploaded automatically)
+{
+  prompt: "Review this mockup",
+  image_files: ["./designs/homepage.png", "./designs/mobile.jpg"]
+}
+
+// 3. Via base64 data (inline images)
+{
+  prompt: "Analyze this chart",
+  image_base64: ["iVBORw0KGgoAAAANSUhEUgAAAAUA..."]
+}
+
+// Combine multiple sources with custom detail level
+{
+  prompt: "Compare these designs",
+  image_urls: ["https://cdn.example.com/v1.png"],
+  image_files: ["./designs/v2.png"],
+  image_detail: "high"
+}
+```
 
 ---
 
@@ -240,31 +302,6 @@ flowchart TB
     Runs --> Assistants
 ```
 
-### Development Commands
-
-```bash
-# Build the project
-npm run build
-
-# Watch mode for development
-npm run dev
-
-# Run linting
-npm run lint
-
-# Fix auto-fixable lint issues
-npm run lint:fix
-
-# Format code with Prettier
-npm run format
-
-# Check formatting without writing
-npm run format:check
-
-# Run tests
-npm test
-```
-
 ### Pre-commit Hooks
 
 This project uses [Husky](https://typicode.github.io/husky/) and [lint-staged](https://github.com/lint-staged/lint-staged) to run checks before each commit:
@@ -291,7 +328,18 @@ openai-assistants-mcp-bridge/
 │       ├── logger.ts         # Structured logging utility
 │       └── retry.ts          # Retry with exponential backoff
 ├── scripts/
-│   └── create-assistants.ts  # Script to create OpenAI Assistants
+│   ├── manage-assistants.ts  # Unified assistant manager wizard
+│   └── lib/
+│       ├── index.ts          # AUTO-GENERATED - exports all assistants
+│       ├── types.ts          # Shared types for assistant configs
+│       ├── generate-index.ts # Generator for index.ts
+│       └── assistants/       # Individual assistant configurations
+│           ├── ux.ts
+│           ├── ui.ts
+│           ├── personas.ts
+│           ├── microcopy.ts
+│           ├── a11y.ts
+│           └── super.ts
 ├── tests/
 │   └── utils/
 │       ├── logger.test.ts
@@ -309,6 +357,17 @@ openai-assistants-mcp-bridge/
 ├── vitest.config.ts          # Test configuration
 └── README.md
 ```
+
+### Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run assistants` | Unified wizard to create/update assistants on OpenAI |
+| `npm run generate:assistants` | Regenerate `scripts/lib/index.ts` after adding/removing assistants |
+| `npm run build` | Build the MCP server |
+| `npm run dev` | Watch mode for development |
+| `npm run lint` | Run ESLint |
+| `npm run test` | Run tests |
 
 ### Environment Variables
 

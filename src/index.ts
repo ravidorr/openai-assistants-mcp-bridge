@@ -24,6 +24,7 @@ import {
   type OpenAIListResponse,
   type ToolResponse,
   type BridgeConfig,
+  type ImageDetail,
 } from "./types.js";
 import {
   RUN_STATUS,
@@ -127,8 +128,11 @@ const threadByTool = new BoundedMap<string, string>(config.maxCacheSize);
 /** Map of tool name to vector store ID for file search */
 const vectorStoreByTool = new BoundedMap<string, string>(config.maxCacheSize);
 
-/** Map of absolute file path to OpenAI file ID to avoid re-uploads */
+/** Map of absolute file path to OpenAI file ID to avoid re-uploads (for assistants/documents) */
 const uploadedFileIdByPath = new BoundedMap<string, string>(config.maxCacheSize);
+
+/** Map of absolute file path to OpenAI file ID for vision uploads */
+const uploadedVisionFileIdByPath = new BoundedMap<string, string>(config.maxCacheSize);
 
 // ============================================================================
 // OpenAI API Client
@@ -298,6 +302,65 @@ async function uploadFileForAssistants(filePath: string): Promise<string> {
 }
 
 /**
+ * Supported image extensions for vision uploads
+ */
+const VISION_IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
+
+/**
+ * Upload a local image file to OpenAI's Files API for vision processing
+ *
+ * @param filePath - Path to the local image file
+ * @returns The OpenAI file ID
+ * @throws Error if the file is not a supported image format
+ */
+async function uploadImageForVision(filePath: string): Promise<string> {
+  const absolutePath = validateFilePath(filePath);
+  const ext = path.extname(absolutePath).toLowerCase();
+
+  if (!VISION_IMAGE_EXTENSIONS.has(ext)) {
+    throw new Error(
+      `Unsupported image format: ${ext}. Supported formats: ${[...VISION_IMAGE_EXTENSIONS].join(", ")}`
+    );
+  }
+
+  logger.info("Uploading image for vision", { path: absolutePath });
+
+  const fileBytes = await readFile(absolutePath);
+  const form = new FormData();
+  form.append("purpose", "vision");
+  form.append("file", new Blob([fileBytes]), path.basename(absolutePath));
+
+  const file = await openaiFetch<OpenAIFile>("/files", form, "POST", true);
+  logger.info("Image uploaded for vision", { path: absolutePath, fileId: file.id });
+  return file.id;
+}
+
+/**
+ * Upload local image files for vision processing
+ * Uses caching to avoid re-uploading the same images
+ *
+ * @param filePaths - Array of local image file paths
+ * @returns Array of OpenAI file IDs
+ */
+async function uploadImagesForVision(filePaths: string[]): Promise<string[]> {
+  const uploadPromises = filePaths.map(async (filePath) => {
+    const absolutePath = validateFilePath(filePath);
+    let fileId = uploadedVisionFileIdByPath.get(absolutePath);
+
+    if (!fileId) {
+      fileId = await uploadImageForVision(absolutePath);
+      uploadedVisionFileIdByPath.set(absolutePath, fileId);
+    } else {
+      logger.debug("Using cached vision file", { path: absolutePath, fileId });
+    }
+
+    return fileId;
+  });
+
+  return Promise.all(uploadPromises);
+}
+
+/**
  * Add a file to a vector store for file search functionality
  *
  * @param vectorStoreId - The vector store ID
@@ -370,7 +433,22 @@ async function ensureFilesInVectorStore(toolName: string, filePaths: string[]): 
  */
 type MessageContentPart =
   | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string; detail?: "auto" | "low" | "high" } };
+  | { type: "image_url"; image_url: { url: string; detail?: ImageDetail } }
+  | { type: "image_file"; image_file: { file_id: string; detail?: ImageDetail } };
+
+/**
+ * Image input options for assistant messages
+ */
+interface ImageInputOptions {
+  /** External image URLs */
+  urls?: string[];
+  /** OpenAI file IDs from uploaded images */
+  fileIds?: string[];
+  /** Base64-encoded image data (will be converted to data URLs) */
+  base64Images?: string[];
+  /** Detail level for all images */
+  detail?: ImageDetail;
+}
 
 /**
  * Run an assistant on a thread and wait for completion
@@ -379,7 +457,7 @@ type MessageContentPart =
  * @param threadId - The thread ID
  * @param userMessage - The message to send to the assistant
  * @param vectorStoreId - Optional vector store ID for file search
- * @param imageUrls - Optional array of image URLs to include in the message
+ * @param imageOptions - Optional image inputs (URLs, file IDs, base64)
  * @returns The assistant's text response
  */
 async function runAssistantOnThread(
@@ -387,27 +465,72 @@ async function runAssistantOnThread(
   threadId: string,
   userMessage: string,
   vectorStoreId?: string,
-  imageUrls?: string[]
+  imageOptions?: ImageInputOptions
 ): Promise<string> {
+  const totalImageCount =
+    (imageOptions?.urls?.length ?? 0) +
+    (imageOptions?.fileIds?.length ?? 0) +
+    (imageOptions?.base64Images?.length ?? 0);
+
   logger.info("Running assistant", {
     assistantId,
     threadId,
     hasVectorStore: !!vectorStoreId,
-    imageCount: imageUrls?.length ?? 0,
+    imageCount: totalImageCount,
   });
 
   // 1. Build message content (text + optional images)
   const content: MessageContentPart[] = [];
+  const detail = imageOptions?.detail ?? "auto";
 
   // Add images first (if any) so they appear before the text prompt
-  if (imageUrls && imageUrls.length > 0) {
-    for (const url of imageUrls) {
+
+  // Add image URLs
+  if (imageOptions?.urls && imageOptions.urls.length > 0) {
+    for (const url of imageOptions.urls) {
       content.push({
         type: "image_url",
-        image_url: { url, detail: "auto" },
+        image_url: { url, detail },
       });
     }
-    logger.debug("Added images to message", { imageCount: imageUrls.length });
+    logger.debug("Added image URLs to message", { count: imageOptions.urls.length });
+  }
+
+  // Add image files (uploaded with purpose="vision")
+  if (imageOptions?.fileIds && imageOptions.fileIds.length > 0) {
+    for (const fileId of imageOptions.fileIds) {
+      content.push({
+        type: "image_file",
+        image_file: { file_id: fileId, detail },
+      });
+    }
+    logger.debug("Added image files to message", { count: imageOptions.fileIds.length });
+  }
+
+  // Add base64 images (converted to data URLs)
+  if (imageOptions?.base64Images && imageOptions.base64Images.length > 0) {
+    for (const base64Data of imageOptions.base64Images) {
+      // Detect image type from base64 header or default to png
+      let mimeType = "image/png";
+      if (base64Data.startsWith("/9j/")) {
+        mimeType = "image/jpeg";
+      } else if (base64Data.startsWith("R0lGOD")) {
+        mimeType = "image/gif";
+      } else if (base64Data.startsWith("UklGR")) {
+        mimeType = "image/webp";
+      }
+
+      const dataUrl = `data:${mimeType};base64,${base64Data}`;
+      content.push({
+        type: "image_url",
+        image_url: { url: dataUrl, detail },
+      });
+    }
+    logger.debug("Added base64 images to message", { count: imageOptions.base64Images.length });
+  }
+
+  if (totalImageCount > 0) {
+    logger.debug("Total images added to message", { count: totalImageCount, detail });
   }
 
   // Add text content
@@ -520,6 +643,22 @@ const toolInputSchema = {
     .describe(
       "Image URLs to include in the message for visual analysis (e.g., screenshots, design mockups)"
     ),
+  image_files: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Local image file paths to upload for visual analysis. Supported formats: PNG, JPG, JPEG, GIF, WEBP"
+    ),
+  image_base64: z
+    .array(z.string())
+    .optional()
+    .describe("Base64-encoded image data for visual analysis (without the data:image/... prefix)"),
+  image_detail: z
+    .enum(["auto", "low", "high"])
+    .optional()
+    .describe(
+      "Detail level for image analysis: 'auto' (default), 'low' (faster/cheaper), or 'high' (more detailed)"
+    ),
   reset_thread: z.boolean().optional().describe("If true, start a fresh thread for this tool"),
   reset_files: z
     .boolean()
@@ -542,14 +681,24 @@ function createSpecialistTool(toolName: string, envKey: AssistantKey): void {
       context,
       files,
       image_urls,
+      image_files,
+      image_base64,
+      image_detail,
       reset_thread,
       reset_files,
     }): Promise<ToolResponse> => {
+      const totalImageCount =
+        (image_urls?.length ?? 0) + (image_files?.length ?? 0) + (image_base64?.length ?? 0);
+
       logger.info("Tool invoked", {
         toolName,
         hasContext: !!context,
         fileCount: files?.length ?? 0,
-        imageCount: image_urls?.length ?? 0,
+        imageUrlCount: image_urls?.length ?? 0,
+        imageFileCount: image_files?.length ?? 0,
+        imageBase64Count: image_base64?.length ?? 0,
+        totalImageCount,
+        imageDetail: image_detail ?? "auto",
       });
 
       const assistantId = getAssistantId(envKey);
@@ -567,7 +716,7 @@ function createSpecialistTool(toolName: string, envKey: AssistantKey): void {
       // Get or create thread
       const threadId = await getOrCreateThreadId(toolName);
 
-      // Handle file uploads
+      // Handle file uploads for file_search
       let vectorStoreId: string | undefined;
       if (files && files.length > 0) {
         vectorStoreId = await ensureFilesInVectorStore(toolName, files);
@@ -575,6 +724,23 @@ function createSpecialistTool(toolName: string, envKey: AssistantKey): void {
         // Use existing vector store if available
         vectorStoreId = vectorStoreByTool.get(toolName);
       }
+
+      // Handle image file uploads for vision
+      let imageFileIds: string[] | undefined;
+      if (image_files && image_files.length > 0) {
+        imageFileIds = await uploadImagesForVision(image_files);
+      }
+
+      // Build image options
+      const imageOptions: ImageInputOptions | undefined =
+        totalImageCount > 0
+          ? {
+              urls: image_urls,
+              fileIds: imageFileIds,
+              base64Images: image_base64,
+              detail: image_detail,
+            }
+          : undefined;
 
       // Combine context and prompt
       const combinedMessage = context ? `${context}\n\n---\n\n${prompt}` : prompt;
@@ -585,7 +751,7 @@ function createSpecialistTool(toolName: string, envKey: AssistantKey): void {
         threadId,
         combinedMessage,
         vectorStoreId,
-        image_urls
+        imageOptions
       );
 
       logger.info("Tool completed", { toolName, responseLength: response.length });
@@ -610,7 +776,7 @@ createSpecialistTool(TOOL_NAMES.SUPER_AGENT, ENV_VARS.ASSISTANT_SUPER as Assista
 // ============================================================================
 
 /**
- * Reset all specialists - clears all threads and vector stores
+ * Reset all specialists - clears all threads, vector stores, and caches
  */
 server.tool(
   TOOL_NAMES.RESET_ALL,
@@ -619,19 +785,25 @@ server.tool(
     if (confirm) {
       const threadCount = threadByTool.size;
       const vectorStoreCount = vectorStoreByTool.size;
+      const uploadedFileCount = uploadedFileIdByPath.size;
+      const visionFileCount = uploadedVisionFileIdByPath.size;
 
       threadByTool.clear();
       vectorStoreByTool.clear();
+      uploadedFileIdByPath.clear();
+      uploadedVisionFileIdByPath.clear();
 
       logger.info("All specialists reset", {
         threadsCleared: threadCount,
         vectorStoresCleared: vectorStoreCount,
+        uploadedFilesCleared: uploadedFileCount,
+        visionFilesCleared: visionFileCount,
       });
       return {
         content: [
           {
             type: "text",
-            text: `All specialist threads (${threadCount}) and vector stores (${vectorStoreCount}) have been reset.`,
+            text: `All specialist threads (${threadCount}), vector stores (${vectorStoreCount}), uploaded files (${uploadedFileCount}), and vision files (${visionFileCount}) have been reset.`,
           },
         ],
       };
@@ -651,6 +823,7 @@ server.tool(TOOL_NAMES.LIST_STATUS, {}, async (): Promise<ToolResponse> => {
     threads: Object.fromEntries(threadByTool),
     vectorStores: Object.fromEntries(vectorStoreByTool),
     uploadedFiles: uploadedFileIdByPath.size,
+    uploadedVisionFiles: uploadedVisionFileIdByPath.size,
     config: {
       pollTimeoutMs: config.pollTimeoutMs,
       openaiBaseUrl: config.openaiBaseUrl,
@@ -661,6 +834,8 @@ server.tool(TOOL_NAMES.LIST_STATUS, {}, async (): Promise<ToolResponse> => {
   logger.info("Status requested", {
     threadCount: threadByTool.size,
     vectorStoreCount: vectorStoreByTool.size,
+    uploadedFileCount: uploadedFileIdByPath.size,
+    visionFileCount: uploadedVisionFileIdByPath.size,
   });
   return {
     content: [{ type: "text", text: JSON.stringify(status, null, 2) }],
@@ -755,6 +930,7 @@ async function shutdown(signal: string): Promise<void> {
     threadsActive: threadByTool.size,
     vectorStoresActive: vectorStoreByTool.size,
     uploadedFiles: uploadedFileIdByPath.size,
+    uploadedVisionFiles: uploadedVisionFileIdByPath.size,
   });
 
   process.exit(0);

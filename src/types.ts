@@ -228,6 +228,14 @@ export interface OpenAIVectorStoreFile {
 }
 
 /**
+ * Image detail level for vision processing
+ * - "auto": Let the model decide (default)
+ * - "low": Lower resolution, faster and cheaper
+ * - "high": Higher resolution, more detailed analysis
+ */
+export type ImageDetail = "auto" | "low" | "high";
+
+/**
  * Tool input schema for specialist tools
  */
 export interface ToolInput {
@@ -235,6 +243,9 @@ export interface ToolInput {
   context?: string;
   files?: string[];
   image_urls?: string[];
+  image_files?: string[];
+  image_base64?: string[];
+  image_detail?: ImageDetail;
   reset_thread?: boolean;
   reset_files?: boolean;
 }

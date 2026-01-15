@@ -1,12 +1,34 @@
 # OpenAI Assistants Creation Guide
 
-This document describes the creation of specialized OpenAI Assistants for product design and UX work in complex SaaS environments.
+This document describes the specialized OpenAI Assistants for product design and UX work in complex SaaS environments.
+
+## Source Files
+
+Assistant configurations are now stored in individual TypeScript files for easier maintenance:
+
+```
+scripts/lib/assistants/
+├── ux.ts           # Expert UX Agent
+├── ui.ts           # Expert UI Agent
+├── personas.ts     # Personas & Journeys Agent
+├── microcopy.ts    # Microcopy Agent
+├── a11y.ts         # Accessibility Agent
+└── super.ts        # Super-Agent
+```
+
+**To modify an assistant:** Edit the relevant file and run:
+```bash
+npm run generate:assistants  # Update the index
+npm run assistants           # Sync to OpenAI
+```
+
+---
 
 ## Prerequisites
 
 ### Obtaining an OpenAI API Key
 
-All assistant creation commands in this guide require an `OPENAI_API_KEY`. Follow these steps to obtain one:
+All assistant creation commands require an `OPENAI_API_KEY`. Follow these steps to obtain one:
 
 1. **Create an OpenAI account** - Go to [platform.openai.com](https://platform.openai.com) and sign up or log in to your existing account.
 

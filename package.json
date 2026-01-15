@@ -20,8 +20,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "create-assistants": "tsx scripts/create-assistants.ts",
-    "update-assistant": "tsx scripts/update-assistant.ts",
+    "generate:assistants": "tsx scripts/lib/generate-index.ts",
+    "assistants": "tsx scripts/manage-assistants.ts",
     "prepare": "husky"
   },
   "dependencies": {
