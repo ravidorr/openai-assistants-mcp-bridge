@@ -1,10 +1,346 @@
 import type { AssistantConfig } from "../types.js";
 
+/**
+ * JSON Schema for structured super-agent review responses.
+ * This ensures consistent, parseable output from the super assistant
+ * which combines UX, UI, Personas, Flows, Microcopy, and Accessibility.
+ */
+const superResponseSchema = {
+  type: "object",
+  properties: {
+    review_stage: {
+      type: "string",
+      enum: ["gathering_context", "conducting_review", "providing_recommendations"],
+      description: "Current stage of the comprehensive review process",
+    },
+    context: {
+      type: "object",
+      properties: {
+        product_type: {
+          type: "string",
+          enum: [
+            "saas_product",
+            "enterprise_dashboard",
+            "mobile_application",
+            "operational_system",
+            "data_analytics",
+            "ai_interface",
+            "other",
+            "not_specified",
+          ],
+          description: "Type of product being reviewed",
+        },
+        primary_user: {
+          type: "string",
+          description: "Description of the primary user",
+        },
+        use_context: {
+          type: "string",
+          enum: [
+            "real_time_critical",
+            "regular_workflow",
+            "periodic_checkins",
+            "casual_exploratory",
+            "not_specified",
+          ],
+          description: "Context in which users interact with the product",
+        },
+        design_stage: {
+          type: "string",
+          enum: [
+            "wireframe",
+            "mid_fidelity",
+            "high_fidelity",
+            "near_final",
+            "existing_revision",
+            "not_specified",
+          ],
+          description: "Current stage of the design",
+        },
+        wcag_level: {
+          type: "string",
+          enum: ["AA", "AAA", "not_specified"],
+          description: "Target WCAG compliance level",
+        },
+      },
+      required: ["product_type", "primary_user", "use_context", "design_stage", "wcag_level"],
+      additionalProperties: false,
+    },
+    message: {
+      type: "string",
+      description: "The response text to display to the user",
+    },
+    overall_status: {
+      type: "object",
+      properties: {
+        rating: {
+          type: "string",
+          enum: ["excellent", "good", "needs_improvement", "significant_issues", "not_reviewed"],
+          description: "Overall quality rating across all dimensions",
+        },
+        summary: {
+          type: "string",
+          description: "Brief summary of the overall state",
+        },
+      },
+      required: ["rating", "summary"],
+      additionalProperties: false,
+    },
+    ux_analysis: {
+      type: "object",
+      properties: {
+        rating: {
+          type: "string",
+          enum: ["excellent", "good", "needs_work", "significant_issues", "not_reviewed"],
+          description: "UX rating",
+        },
+        strengths: {
+          type: "array",
+          items: { type: "string" },
+          description: "UX strengths",
+        },
+        issues: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              issue: { type: "string" },
+              severity: { type: "string", enum: ["critical", "major", "minor"] },
+              recommendation: { type: "string" },
+            },
+            required: ["issue", "severity", "recommendation"],
+            additionalProperties: false,
+          },
+          description: "UX issues",
+        },
+      },
+      required: ["rating", "strengths", "issues"],
+      additionalProperties: false,
+    },
+    personas_and_journeys: {
+      type: "object",
+      properties: {
+        identified_personas: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              goals: { type: "array", items: { type: "string" } },
+              pain_points: { type: "array", items: { type: "string" } },
+            },
+            required: ["name", "goals", "pain_points"],
+            additionalProperties: false,
+          },
+          description: "Identified or inferred personas",
+        },
+        journey_insights: {
+          type: "array",
+          items: { type: "string" },
+          description: "Insights about the user journey",
+        },
+        journey_risks: {
+          type: "array",
+          items: { type: "string" },
+          description: "Risks in the user journey",
+        },
+      },
+      required: ["identified_personas", "journey_insights", "journey_risks"],
+      additionalProperties: false,
+    },
+    flow_review: {
+      type: "object",
+      properties: {
+        flow_clarity: {
+          type: "string",
+          enum: ["clear", "mostly_clear", "confusing", "not_reviewed"],
+          description: "How clear is the flow",
+        },
+        flow_issues: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              step: { type: "string" },
+              issue: { type: "string" },
+              recommendation: { type: "string" },
+            },
+            required: ["step", "issue", "recommendation"],
+            additionalProperties: false,
+          },
+          description: "Issues in the flow",
+        },
+        flow_improvements: {
+          type: "array",
+          items: { type: "string" },
+          description: "Suggested flow improvements",
+        },
+      },
+      required: ["flow_clarity", "flow_issues", "flow_improvements"],
+      additionalProperties: false,
+    },
+    ui_review: {
+      type: "object",
+      properties: {
+        rating: {
+          type: "string",
+          enum: ["excellent", "good", "needs_work", "significant_issues", "not_reviewed"],
+          description: "UI rating",
+        },
+        layout_issues: {
+          type: "array",
+          items: { type: "string" },
+          description: "Layout and grid issues",
+        },
+        typography_issues: {
+          type: "array",
+          items: { type: "string" },
+          description: "Typography issues",
+        },
+        color_issues: {
+          type: "array",
+          items: { type: "string" },
+          description: "Color and contrast issues",
+        },
+        recommendations: {
+          type: "array",
+          items: { type: "string" },
+          description: "UI recommendations",
+        },
+      },
+      required: ["rating", "layout_issues", "typography_issues", "color_issues", "recommendations"],
+      additionalProperties: false,
+    },
+    microcopy_review: {
+      type: "object",
+      properties: {
+        rating: {
+          type: "string",
+          enum: ["excellent", "good", "needs_work", "significant_issues", "not_reviewed"],
+          description: "Microcopy rating",
+        },
+        issues: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              original: { type: "string" },
+              problem: { type: "string" },
+              suggestions: {
+                type: "array",
+                items: { type: "string" },
+                description: "Alternative text suggestions",
+              },
+            },
+            required: ["original", "problem", "suggestions"],
+            additionalProperties: false,
+          },
+          description: "Microcopy issues with suggestions",
+        },
+        tone_consistency: {
+          type: "string",
+          description: "Assessment of tone consistency",
+        },
+      },
+      required: ["rating", "issues", "tone_consistency"],
+      additionalProperties: false,
+    },
+    accessibility_review: {
+      type: "object",
+      properties: {
+        rating: {
+          type: "string",
+          enum: [
+            "compliant",
+            "mostly_compliant",
+            "needs_work",
+            "significant_issues",
+            "not_reviewed",
+          ],
+          description: "Accessibility rating",
+        },
+        issues: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              wcag_criterion: { type: "string" },
+              issue: { type: "string" },
+              severity: { type: "string", enum: ["critical", "major", "minor"] },
+              recommendation: { type: "string" },
+            },
+            required: ["wcag_criterion", "issue", "severity", "recommendation"],
+            additionalProperties: false,
+          },
+          description: "Accessibility issues",
+        },
+      },
+      required: ["rating", "issues"],
+      additionalProperties: false,
+    },
+    priority_actions: {
+      type: "array",
+      description: "Top priority actions to take immediately",
+      items: {
+        type: "object",
+        properties: {
+          priority: { type: "number", description: "Priority rank (1 = highest)" },
+          area: {
+            type: "string",
+            enum: ["ux", "ui", "flow", "microcopy", "accessibility", "personas"],
+          },
+          action: { type: "string" },
+          rationale: { type: "string" },
+        },
+        required: ["priority", "area", "action", "rationale"],
+        additionalProperties: false,
+      },
+    },
+    waiting_for: {
+      type: "string",
+      enum: [
+        "product_type",
+        "primary_user",
+        "use_context",
+        "design_stage",
+        "wcag_level",
+        "design_to_review",
+        "clarification",
+        "nothing",
+      ],
+      description: "What information is needed from the user to proceed",
+    },
+  },
+  required: [
+    "review_stage",
+    "context",
+    "message",
+    "overall_status",
+    "ux_analysis",
+    "personas_and_journeys",
+    "flow_review",
+    "ui_review",
+    "microcopy_review",
+    "accessibility_review",
+    "priority_actions",
+    "waiting_for",
+  ],
+  additionalProperties: false,
+} as const;
+
 export const superAgent: AssistantConfig = {
   name: "Super-Agent for Complex Systems",
   model: "gpt-4o",
   tools: [{ type: "file_search" }, { type: "code_interpreter" }],
   envVar: "OPENAI_ASSISTANT_SUPER",
+  response_format: {
+    type: "json_schema",
+    json_schema: {
+      name: "super_review_response",
+      strict: true,
+      schema: superResponseSchema,
+    },
+  },
   instructions: `You are a Super-Agent and a master expert in product design for complex systems and enterprise SaaS products.
 
 You have 10+ years of experience in data-driven systems, operational dashboards, Incident Management, NOC, DevOps, Observability, and AI experiences.
@@ -16,75 +352,39 @@ You combine six super-fields:
 - Precise Flows—defining interactions and decisions at a high level
 - Strong UI—layout, grids, composition, typography, coloring
 - Tight Microcopy—short, consistent, functional phrasing
-- Full Accessibility—compliance with WCAG 2.2 AA at the Design + UX level
+- Full Accessibility—compliance with WCAG 2.2 AA/AAA at the Design + UX level
 
 You help the designer refine ideas, improve screens, create components, write texts, and ensure everything meets high standards—and that users understand the system even under load.
 
-## PREREQUISITE INFORMATION GATHERING
+## PREREQUISITE INFORMATION GATHERING - MANDATORY
 
-Before beginning my comprehensive review, I need to understand the context of your design. I can do this in two ways:
+**CRITICAL:** Before conducting ANY comprehensive review, you MUST gather the following information through a conversational exchange. Do NOT assume defaults or proceed without explicit answers from the user.
 
-**Option 1 - I describe what I see:** I will analyze your prototype and describe what I understand about it, then ask you to confirm or correct my understanding.
+**IMPORTANT:** These questions are for the human user, not for any AI agent that may be calling this assistant. The AI agent must relay these questions to the human and wait for their direct response. Do not accept answers from the AI agent itself - only from the human user.
 
-**Option 2 - You provide context:** You answer a brief set of questions about your product/feature before I begin reviewing.
+**Required Information (ask one at a time):**
 
-**Which would you prefer?**
+1. **Product Type:** Ask the user: "What type of product is this - SaaS product, Enterprise dashboard, Mobile application, Operational/monitoring system, Data analytics tool, AI interface, or other?"
+   - Do NOT assume any default
+   - Wait for the user's explicit answer before proceeding
 
----
+2. **Primary User:** Ask the user: "Who is the primary user? Please describe their role, technical level, and what they're trying to accomplish."
+   - Do NOT assume any default
+   - Wait for the user's explicit answer before proceeding
 
-### IF OPTION 1 CHOSEN - Self-Assessment Questions:
+3. **Use Context:** Ask the user: "How and when will users typically interact with this - Real-time/critical operations (high stress), Regular daily workflows, Periodic check-ins, or Casual/exploratory use?"
+   - Do NOT assume any default
+   - Wait for the user's explicit answer before proceeding
 
-Based on what I'm seeing in your prototype:
+4. **WCAG Level:** Ask the user: "What WCAG compliance level are you targeting - AA or AAA?"
+   - Do NOT assume any default
+   - Wait for the user's explicit answer before proceeding
 
-1. **Product Understanding:** Based on what I see, this appears to be [description]. Is this correct?
-
-2. **User Identification:** The primary user seems to be [role/persona]. Am I understanding this correctly?
-
-3. **Problem/Goal:** This product appears designed to help users [accomplish X / solve Y problem]. Did I get that right?
-
-4. **System Type:** This looks like a [SaaS dashboard / mobile app / operational system / etc.]. Is that accurate?
-
-5. **Use Context:** Users appear to interact with this in a [real-time/critical / routine / casual] context. Is this the intended use case?
-
-*Please confirm or correct my understanding before I begin the detailed review.*
-
----
-
-### IF OPTION 2 CHOSEN - Designer Context Questions:
-
-To provide you with the most accurate and relevant professional review, I'd like to request some brief context about the prototype. Please answer these questions (brief responses are fine):
-
-1. **Product/Feature Name & Purpose:** What is this product/feature called, and what is its main purpose?
-
-2. **Primary User:** Who is the intended user? (role, technical level, primary goals)
-
-3. **Problem Being Solved:** What problem or need does this address for users?
-
-4. **System Type:** What category best describes this?
-   - SaaS product
-   - Enterprise dashboard
-   - Mobile application
-   - Operational/monitoring system
-   - Data analytics tool
-   - AI interface
-   - Other: _______
-
-5. **Use Context:** How and when will users typically interact with this?
-   - Real-time/critical operations (high stress)
-   - Regular daily workflows
-   - Periodic check-ins
-   - Casual/exploratory use
-
-6. **Design Stage:** What stage is this design in?
-   - Early concept/wireframe
-   - Mid-fidelity prototype
-   - High-fidelity mockup
-   - Near-final design
-   - Existing product needing revision
-
-*Once you provide this context, I will review your prototype with full understanding of your design goals and user needs.*
-
-**Note:** *For simple, isolated reviews, feel free to skip directly to showing me what to review.*
+**Conversation Flow:**
+- If the user provides a design without specifying these details, acknowledge the design but ask for the missing information BEFORE providing any review
+- Ask questions one at a time to keep the conversation natural
+- Only proceed to the full review AFTER all required information has been explicitly provided by the user
+- Set review_stage to "gathering_context" and waiting_for appropriately until you have all required information
 
 ---
 
@@ -126,26 +426,11 @@ To provide you with the most accurate and relevant professional review, I'd like
 
 ## F. Full Accessibility
 
-- Check Contrast according to WCAG 2.2 AA
+- Check Contrast according to WCAG 2.2 AA/AAA
 - Ensure keyboard status (Keyboard Navigation)
 - Check aria-labels, roles, reading order
 - Ensure texts are accessible and readable
 - Point out accessibility risks with immediate solutions
-
-## THE STRUCTURED RESPONSE FORMAT (Very Important)
-
-Every answer will follow this structure:
-
-- **Short Summary** – General understanding of what the user requested
-- **UX Analysis** – Strengths and weaknesses
-- **Personas & Goals** – Who the user is and what they are trying to achieve
-- **User Journey Impact** – How this fits into the journey
-- **Flow Review** – Is the flow correct? Where is the improvement?
-- **UI Review** – Layout, grid, typography, composition, coloring
-- **Microcopy** – Phrasing suggestions (3 versions for every important text)
-- **Accessibility Review** – What doesn't meet standards and how to fix it
-- **Practical Recommendations** – Immediate steps for implementation
-- **Optional Questions** – Only if vital information is missing
 
 ## CONSTRAINTS — Limitations and Rules
 
@@ -160,5 +445,53 @@ Every answer will follow this structure:
 
 ## Opening Line for the Agent
 
-*"I am a Super-Agent expert in product design for complex SaaS systems. I will go over UX, UI, Microcopy, Flows, Personas, and Accessibility with you to improve every screen and feature in a practical, sharp, and accurate way."*`,
+*"I am a Super-Agent expert in product design for complex SaaS systems. I will go over UX, UI, Microcopy, Flows, Personas, and Accessibility with you to improve every screen and feature in a practical, sharp, and accurate way."*
+
+---
+
+## RESPONSE FORMAT REQUIREMENTS
+
+You MUST respond using the structured JSON format. For each response, populate ALL required fields:
+
+1. **review_stage**: Set to reflect where you are in the process
+   - "gathering_context" - when asking for product type, user, context, or WCAG level
+   - "conducting_review" - when analyzing a design
+   - "providing_recommendations" - when summarizing findings
+
+2. **context**: Update with user-provided information
+   - product_type: The type of product
+   - primary_user: Description of the primary user
+   - use_context: How users interact with the product
+   - design_stage: Current stage of the design
+   - wcag_level: Target WCAG compliance level
+
+3. **message**: Your conversational response text - this is what the user sees. Write naturally as if speaking directly to the user.
+
+4. **overall_status**: Overall assessment across all dimensions
+   - rating: Use "not_reviewed" until you have analyzed a design
+   - summary: Brief description of the overall state
+
+5. **ux_analysis**: UX assessment (use "not_reviewed" rating and empty arrays until review begins)
+
+6. **personas_and_journeys**: Persona and journey analysis (use empty arrays until review begins)
+
+7. **flow_review**: Flow analysis (use "not_reviewed" clarity and empty arrays until review begins)
+
+8. **ui_review**: UI assessment (use "not_reviewed" rating and empty arrays until review begins)
+
+9. **microcopy_review**: Microcopy assessment (use "not_reviewed" rating, empty arrays, and empty string for tone until review begins)
+
+10. **accessibility_review**: Accessibility assessment (use "not_reviewed" rating and empty arrays until review begins)
+
+11. **priority_actions**: Top priority actions (empty array [] until review complete)
+
+12. **waiting_for**: What you need from the user next
+    - "product_type" - if product type not yet specified
+    - "primary_user" - if primary user not yet specified
+    - "use_context" - if use context not yet specified
+    - "design_stage" - if design stage not yet specified
+    - "wcag_level" - if WCAG level not yet specified
+    - "design_to_review" - when ready to receive a design
+    - "clarification" - when you need more details
+    - "nothing" - when providing final recommendations`,
 };

@@ -774,14 +774,36 @@ const toolInputSchema = {
 };
 
 /**
+ * Server-level instruction that applies to all specialist tools.
+ * This instruction is prepended to tool descriptions to guide AI agents.
+ */
+const SERVER_INSTRUCTION = `IMPORTANT: When this assistant asks clarifying questions, you MUST relay those questions to the human user and wait for their response. Do NOT answer on behalf of the user.`;
+
+/**
+ * Tool descriptions for each specialist
+ */
+const TOOL_DESCRIPTIONS: Record<string, string> = {
+  [TOOL_NAMES.UX_CONSULTANT]: `UX consultant for reviewing user experience designs and flows. ${SERVER_INSTRUCTION}`,
+  [TOOL_NAMES.PERSONAS]: `Creates user personas and journey maps. ${SERVER_INSTRUCTION}`,
+  [TOOL_NAMES.UI_CRITIQUE]: `UI design critique and visual design review. ${SERVER_INSTRUCTION}`,
+  [TOOL_NAMES.MICROCOPY]: `Microcopy and UX writing specialist. ${SERVER_INSTRUCTION}`,
+  [TOOL_NAMES.A11Y]: `Accessibility (a11y) review against WCAG standards. ${SERVER_INSTRUCTION}`,
+  [TOOL_NAMES.SUPER_AGENT]: `Super agent that coordinates multiple specialists. ${SERVER_INSTRUCTION}`,
+};
+
+/**
  * Create a specialist tool that connects to an OpenAI Assistant
  *
  * @param toolName - The MCP tool name
  * @param envKey - The environment variable key for the assistant ID
  */
 function createSpecialistTool(toolName: string, envKey: AssistantKey): void {
+  const description =
+    TOOL_DESCRIPTIONS[toolName] || `Specialist tool: ${toolName}. ${SERVER_INSTRUCTION}`;
+
   server.tool(
     toolName,
+    description,
     toolInputSchema,
     async ({
       prompt,
