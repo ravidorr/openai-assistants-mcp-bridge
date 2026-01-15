@@ -48,7 +48,7 @@ function scanAssistantFiles(): AssistantFile[] {
 
 function generateIndexContent(assistants: AssistantFile[]): string {
   const imports = assistants
-    .map((a) => `import { ${a.exportName} } from "./assistants/${a.basename}";`)
+    .map((a) => `import { ${a.exportName} } from "./assistants/${a.basename}.js";`)
     .join("\n");
 
   const arrayItems = assistants.map((a) => `  ${a.exportName},`).join("\n");
@@ -57,10 +57,10 @@ function generateIndexContent(assistants: AssistantFile[]): string {
 // Run: npm run generate:assistants
 // Generated at: ${new Date().toISOString()}
 
-import type { AssistantConfig } from "./types";
+import type { AssistantConfig } from "./types.js";
 ${imports}
 
-export type { AssistantConfig, OpenAIAssistant, McpConfig, McpServerConfig, McpJson } from "./types";
+export type { AssistantConfig, OpenAIAssistant, McpConfig, McpServerConfig, McpJson } from "./types.js";
 
 /**
  * All available assistant configurations.

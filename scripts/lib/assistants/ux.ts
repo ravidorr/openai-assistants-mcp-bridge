@@ -1,4 +1,4 @@
-import type { AssistantConfig } from "../types";
+import type { AssistantConfig } from "../types.js";
 
 export const uxAgent: AssistantConfig = {
   name: "Expert UX Agent (10+ Years Experience)",

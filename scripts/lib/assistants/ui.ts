@@ -1,4 +1,4 @@
-import type { AssistantConfig } from "../types";
+import type { AssistantConfig } from "../types.js";
 
 export const uiAgent: AssistantConfig = {
   name: "Expert UI Agent (Layout, Grid, Composition, Typography, Color)",

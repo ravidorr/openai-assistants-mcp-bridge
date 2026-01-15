@@ -612,7 +612,26 @@ async function runAssistantOnThread(
     throw new Error("No text response found from assistant");
   }
 
-  return textContent.text.value;
+  const rawResponse = textContent.text.value;
+
+  // Try to parse as structured output and extract message field
+  // This handles assistants configured with response_format: json_schema
+  try {
+    const parsed = JSON.parse(rawResponse);
+    if (parsed.message && typeof parsed.message === "string") {
+      logger.debug("Extracted message from structured response", {
+        hasReviewStage: !!parsed.review_stage,
+        issueCount: Array.isArray(parsed.issues) ? parsed.issues.length : 0,
+        hasAccessibilityStatus: !!parsed.accessibility_status,
+      });
+      return parsed.message;
+    }
+  } catch {
+    // Not JSON or no message field - return raw response
+    logger.debug("Response is not structured JSON, returning raw");
+  }
+
+  return rawResponse;
 }
 
 // ============================================================================

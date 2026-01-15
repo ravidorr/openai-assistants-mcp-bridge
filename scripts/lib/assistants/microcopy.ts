@@ -1,4 +1,4 @@
-import type { AssistantConfig } from "../types";
+import type { AssistantConfig } from "../types.js";
 
 export const microcopyAgent: AssistantConfig = {
   name: "Expert Agent in Tight Microcopy and Consistent Tone",

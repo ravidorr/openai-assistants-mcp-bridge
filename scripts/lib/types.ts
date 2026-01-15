@@ -2,12 +2,32 @@
  * Shared types for OpenAI Assistants configuration
  */
 
+/**
+ * JSON Schema definition for structured outputs
+ */
+export interface JsonSchema {
+  name: string;
+  strict?: boolean;
+  schema: Record<string, unknown>;
+}
+
+/**
+ * Response format configuration for structured outputs
+ * @see https://platform.openai.com/docs/guides/structured-outputs
+ */
+export interface ResponseFormat {
+  type: "json_schema" | "json_object" | "text";
+  json_schema?: JsonSchema;
+}
+
 export interface AssistantConfig {
   name: string;
   model: string;
   tools: Array<{ type: "file_search" } | { type: "code_interpreter" }>;
   instructions: string;
   envVar: string;
+  /** Optional structured output format - when set, assistant responses will be JSON */
+  response_format?: ResponseFormat;
 }
 
 export interface OpenAIAssistant {

@@ -2,13 +2,13 @@
 // Run: npm run generate:assistants
 // Generated at: 2026-01-15T16:03:27.176Z
 
-import type { AssistantConfig } from "./types";
-import { a11yAgent } from "./assistants/a11y";
-import { microcopyAgent } from "./assistants/microcopy";
-import { personasAgent } from "./assistants/personas";
-import { superAgent } from "./assistants/super";
-import { uiAgent } from "./assistants/ui";
-import { uxAgent } from "./assistants/ux";
+import type { AssistantConfig } from "./types.js";
+import { a11yAgent } from "./assistants/a11y.js";
+import { microcopyAgent } from "./assistants/microcopy.js";
+import { personasAgent } from "./assistants/personas.js";
+import { superAgent } from "./assistants/super.js";
+import { uiAgent } from "./assistants/ui.js";
+import { uxAgent } from "./assistants/ux.js";
 
 export type {
   AssistantConfig,
@@ -16,7 +16,7 @@ export type {
   McpConfig,
   McpServerConfig,
   McpJson,
-} from "./types";
+} from "./types.js";
 
 /**
  * All available assistant configurations.

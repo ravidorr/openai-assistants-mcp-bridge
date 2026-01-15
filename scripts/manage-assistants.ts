@@ -26,7 +26,7 @@ import {
   type AssistantConfig,
   type OpenAIAssistant,
   type McpConfig,
-} from "./lib/index";
+} from "./lib/index.js";
 
 // ============================================================================
 // Configuration
@@ -172,6 +172,18 @@ async function listAssistants(): Promise<OpenAIAssistant[]> {
 }
 
 async function createAssistant(config: AssistantConfig): Promise<OpenAIAssistant> {
+  const body: Record<string, unknown> = {
+    name: config.name,
+    model: config.model,
+    tools: config.tools,
+    instructions: config.instructions,
+  };
+
+  // Add response_format if specified (for structured outputs)
+  if (config.response_format) {
+    body.response_format = config.response_format;
+  }
+
   const response = await fetch(`${OPENAI_BASE_URL}/assistants`, {
     method: "POST",
     headers: {
@@ -179,12 +191,7 @@ async function createAssistant(config: AssistantConfig): Promise<OpenAIAssistant
       Authorization: `Bearer ${OPENAI_API_KEY}`,
       "OpenAI-Beta": "assistants=v2",
     },
-    body: JSON.stringify({
-      name: config.name,
-      model: config.model,
-      tools: config.tools,
-      instructions: config.instructions,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -199,6 +206,18 @@ async function updateAssistant(
   assistantId: string,
   config: AssistantConfig
 ): Promise<OpenAIAssistant> {
+  const body: Record<string, unknown> = {
+    name: config.name,
+    model: config.model,
+    tools: config.tools,
+    instructions: config.instructions,
+  };
+
+  // Add response_format if specified (for structured outputs)
+  if (config.response_format) {
+    body.response_format = config.response_format;
+  }
+
   const response = await fetch(`${OPENAI_BASE_URL}/assistants/${assistantId}`, {
     method: "POST",
     headers: {
@@ -206,12 +225,7 @@ async function updateAssistant(
       Authorization: `Bearer ${OPENAI_API_KEY}`,
       "OpenAI-Beta": "assistants=v2",
     },
-    body: JSON.stringify({
-      name: config.name,
-      model: config.model,
-      tools: config.tools,
-      instructions: config.instructions,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
