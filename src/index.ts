@@ -614,17 +614,19 @@ async function runAssistantOnThread(
 
   const rawResponse = textContent.text.value;
 
-  // Try to parse as structured output and extract message field
+  // Try to parse as structured output and return full response
   // This handles assistants configured with response_format: json_schema
   try {
     const parsed = JSON.parse(rawResponse);
     if (parsed.message && typeof parsed.message === "string") {
-      logger.debug("Extracted message from structured response", {
+      logger.debug("Parsed structured response", {
         hasReviewStage: !!parsed.review_stage,
         issueCount: Array.isArray(parsed.issues) ? parsed.issues.length : 0,
         hasAccessibilityStatus: !!parsed.accessibility_status,
       });
-      return parsed.message;
+
+      // Return full structured response formatted as readable text
+      return formatStructuredResponse(parsed);
     }
   } catch {
     // Not JSON or no message field - return raw response
@@ -632,6 +634,92 @@ async function runAssistantOnThread(
   }
 
   return rawResponse;
+}
+
+/**
+ * Format a structured assistant response into readable text
+ * @param response - The parsed JSON response from the assistant
+ * @returns Formatted text representation of the response
+ */
+function formatStructuredResponse(response: Record<string, unknown>): string {
+  const parts: string[] = [];
+
+  // Add the main message
+  if (response.message) {
+    parts.push(String(response.message));
+  }
+
+  // Add accessibility status if present
+  if (response.accessibility_status && typeof response.accessibility_status === "object") {
+    const status = response.accessibility_status as Record<string, unknown>;
+    parts.push("\n## Accessibility Status");
+    if (status.overall_rating) {
+      parts.push(`**Overall Rating:** ${String(status.overall_rating).replace(/_/g, " ")}`);
+    }
+    if (status.summary) {
+      parts.push(`**Summary:** ${status.summary}`);
+    }
+  }
+
+  // Add issues if present
+  if (Array.isArray(response.issues) && response.issues.length > 0) {
+    parts.push("\n## Issues Found");
+    for (const issue of response.issues) {
+      if (typeof issue === "object" && issue !== null) {
+        const i = issue as Record<string, unknown>;
+        const severity = i.severity ? `[${String(i.severity).toUpperCase()}]` : "";
+        const category = i.category ? String(i.category).replace(/_/g, " ") : "General";
+        parts.push(`\n### ${severity} ${category}`);
+
+        if (i.wcag_criterion) {
+          parts.push(`**WCAG Criterion:** ${i.wcag_criterion}`);
+        }
+        if (i.location) {
+          parts.push(`**Location:** ${i.location}`);
+        }
+        if (i.description) {
+          parts.push(`**Description:** ${i.description}`);
+        }
+        if (i.recommendation) {
+          parts.push(`**Recommendation:** ${i.recommendation}`);
+        }
+        if (i.code_example && String(i.code_example).trim()) {
+          parts.push(`**Code Example:**\n\`\`\`\n${i.code_example}\n\`\`\``);
+        }
+      }
+    }
+  }
+
+  // Add emphasis points if present
+  if (Array.isArray(response.emphasis_points) && response.emphasis_points.length > 0) {
+    parts.push("\n## Key Points for Development");
+    for (const point of response.emphasis_points) {
+      parts.push(`- ${point}`);
+    }
+  }
+
+  // Add context info if present
+  if (response.context && typeof response.context === "object") {
+    const ctx = response.context as Record<string, unknown>;
+    const contextParts: string[] = [];
+    if (ctx.wcag_level && ctx.wcag_level !== "not_specified") {
+      contextParts.push(`WCAG Level: ${ctx.wcag_level}`);
+    }
+    if (ctx.platform && ctx.platform !== "not_specified") {
+      contextParts.push(`Platform: ${ctx.platform}`);
+    }
+    if (contextParts.length > 0) {
+      parts.push(`\n---\n*Review Context: ${contextParts.join(", ")}*`);
+    }
+  }
+
+  // Add waiting_for info if the assistant needs more input
+  if (response.waiting_for && response.waiting_for !== "nothing") {
+    const waitingFor = String(response.waiting_for).replace(/_/g, " ");
+    parts.push(`\n---\n*Waiting for: ${waitingFor}*`);
+  }
+
+  return parts.join("\n");
 }
 
 // ============================================================================
