@@ -102,7 +102,15 @@ const a11yResponseSchema = {
             description: "Optional code snippet showing the fix",
           },
         },
-        required: ["category", "severity", "wcag_criterion", "description", "recommendation"],
+        required: [
+          "category",
+          "severity",
+          "wcag_criterion",
+          "description",
+          "location",
+          "recommendation",
+          "code_example",
+        ],
         additionalProperties: false,
       },
     },
@@ -239,8 +247,8 @@ You MUST respond using the structured JSON format. For each response, populate A
    - summary: Brief description of the accessibility state
 
 5. **issues**: Array of accessibility problems found (empty array [] until review begins)
-   - Each issue must include: category, severity, wcag_criterion, description, recommendation
-   - Optional fields: location, code_example
+   - Each issue must include ALL fields: category, severity, wcag_criterion, description, location, recommendation, code_example
+   - For code_example, provide an empty string "" if no code example is applicable
 
 6. **emphasis_points**: Key points for continued development (can be empty array [])
 
