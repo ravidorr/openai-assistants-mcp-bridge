@@ -1,4 +1,8 @@
 {
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/ravidorr"
+  },
   "name": "openai-assistants-mcp-bridge",
   "version": "1.1.0",
   "description": "MCP server that bridges MCP clients to OpenAI's Assistants API, exposing specialist tools for UX, UI, accessibility, and content review",
