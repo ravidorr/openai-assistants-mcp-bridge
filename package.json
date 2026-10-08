@@ -22,7 +22,9 @@
     "test:coverage": "vitest run --coverage",
     "generate:assistants": "tsx scripts/lib/generate-index.ts",
     "assistants": "tsx scripts/manage-assistants.ts",
-    "prepare": "husky"
+    "prepare": "husky",
+    "validate:security-policy": "node scripts/validate-security-policy-version.mjs",
+    "test:security-policy": "node --test scripts/validate-security-policy-version.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
