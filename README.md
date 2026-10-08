@@ -32,6 +32,31 @@ The setup wizard handles everything: prompts for your API key, creates the assis
 
 ---
 
+## Tips for Best Results
+
+### Tip 1: Always Use Specialized Tools
+
+To make Cursor always check MCP tools first, add this to the User Rules in Cursor Settings:
+
+> Before performing any specialized task, ALWAYS:
+> 1. List available MCP tools in /mcps/*/tools/ directories
+> 2. Check if a specialized tool exists for the task
+> 3. Use the specialized MCP tool if available, rather than doing the work yourself
+> 4. Only fall back to doing it yourself if no appropriate MCP tool exists
+
+### Tip 2: Relay Expert Questions to You
+
+The AI assistants (UX consultant, accessibility reviewer, etc.) often ask clarifying questions to provide better feedback. Cursor's AI might answer these questions on your behalf instead of asking you. To prevent this, add this rule to User Rules in Cursor Settings:
+
+> When MCP tools ask clarifying questions, ALWAYS relay those questions to me and wait for my response. NEVER answer on my behalf.
+
+**How to add User Rules in Cursor:**
+1. Open Cursor Settings (`Cmd+,` on Mac or `Ctrl+,` on Windows/Linux)
+2. Search for "Rules" or navigate to the Rules section
+3. Find "User Rules" and add the rules above
+
+---
+
 ## Detailed Setup Guide
 
 ### Prerequisites
